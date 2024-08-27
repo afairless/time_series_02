@@ -2,7 +2,7 @@
 
 import math
 import numpy as np
-from typing import Any
+from typing import Any, Iterable, Sequence
 import matplotlib.pyplot as plt
 from scipy.stats import dirichlet
 import statsmodels.api as sm
@@ -28,7 +28,7 @@ def dummy_function02(input: int) -> int:
     return input + 1
 
 
-def create_time_series(
+def create_time_series_01(
     n: int, n_trends: int, 
     autogressive_order: int=3, moving_average_order: int=2, 
     arma_std_factor: float=4, season_std_factor: float=9, 
@@ -85,14 +85,82 @@ def randomize_segment_lengths(
 
     proportions = dirichlet.rvs([2] * segment_n, size=1, random_state=seed)
     factor = total_n / np.sum(proportions)
-    discrete_segment_lengths = np.round(proportions * factor).astype(int)
-    assert np.sum(discrete_segment_lengths) == total_n
-    
-    return discrete_segment_lengths[0]
+    discrete_segment_lengths = np.round(proportions * factor).astype(int)[0]
+
+    if np.sum(discrete_segment_lengths) > total_n:
+        difference = np.sum(discrete_segment_lengths) - total_n
+        max_idx = np.argmax(discrete_segment_lengths)
+        discrete_segment_lengths[max_idx] -= difference
+
+    elif np.sum(discrete_segment_lengths) < total_n:
+        difference = np.sum(discrete_segment_lengths) - total_n
+        min_idx = np.argmin(discrete_segment_lengths)
+        discrete_segment_lengths[min_idx] -= difference
+
+    return discrete_segment_lengths
 
 
 def flatten_list_of_lists(list_of_lists: list[list[Any]]) -> list[Any]:
     return [item for sublist in list_of_lists for item in sublist]
+
+
+def create_time_series_02(
+    time_n: int=100, constant: Sequence[float]=[0]*100, trend_n: int=1, 
+    season_period: int=10, sin_amplitude: float=1, cos_amplitude: float=1, 
+    autogressive_lag_polynomial_coefficient: float=0.5, 
+    moving_average_lag_polynomial_coefficient: float=0.5, 
+    arma_factor: float=1, seed: int=231562) -> np.ndarray:
+    """
+    Create time series data with multiple trends and seasonality added to output
+        from ARMA model
+    """
+
+    assert len(constant) == time_n
+
+
+    # set multiple trends across time series
+    ##################################################
+
+    trend_lens = randomize_segment_lengths(time_n, trend_n)
+    rng = np.random.default_rng(seed)
+    trend_slopes = rng.uniform(-9, 9, trend_n)
+    assert len(trend_lens) == len(trend_slopes)
+    trend_slopes_extended_lists = [
+        [trend_slopes[i]] * trend_lens[i] for i in range(len(trend_lens))]
+    trend_slopes_extended = flatten_list_of_lists(trend_slopes_extended_lists)
+    assert len(trend_slopes_extended) == time_n
+
+    # set first slope to zero so that doesn't change first time series value
+    trend_slopes_extended[0] = 0
+    trend = np.array(trend_slopes_extended).cumsum()
+
+
+    # set seasonality across time series
+    ##################################################
+
+    time_idx = np.arange(time_n)
+    season_sin = sin_amplitude * np.sin(2 * np.pi * time_idx / season_period)
+    season_cos = cos_amplitude * np.cos(2 * np.pi * time_idx / season_period)
+
+
+    # set ARMA noise across time series
+    ##################################################
+
+    ar = np.array([1, autogressive_lag_polynomial_coefficient])
+    ma = np.array([1, moving_average_lag_polynomial_coefficient])
+    arma_process = ArmaProcess(ar, ma)
+
+    np.random.seed(seed+1)
+    arma_noise = arma_process.generate_sample(nsample=time_n)
+
+
+    # combine all components into a single time series
+    ##################################################
+
+    time_series = (
+        constant + trend + season_sin + season_cos + arma_factor * arma_noise)
+
+    return time_series
 
 
 def main():
@@ -107,58 +175,35 @@ def main():
     #   arbitrarily flatten trend
     #   shift constant
 
-    n = 400
-    n_trends = 7
-    srs = create_time_series(n, n_trends, 3, 2, 4, 9, 84558)
+    # n = 400
+    # n_trends = 7
+    # srs = create_time_series_01(n, n_trends, 3, 2, 4, 9, 84558)
 
-    n_samples = 100
-    constant = np.zeros(n_samples)
-
+    time_n = 100
+    constant = [0] * time_n
     trend_n = 5
-    trend_lens = randomize_segment_lengths(n_samples, trend_n)
+    season_period = 20
+    sin_amplitude = 20
+    cos_amplitude = 20
+    ar_lag_coef = 0.9
+    ma_lag_coef = 1.9
+    arma_factor = 7
+    time_series = create_time_series_02(
+        time_n, constant, trend_n, season_period, sin_amplitude, cos_amplitude, 
+        ar_lag_coef, ma_lag_coef, arma_factor, 761824)
 
-    rng = np.random.default_rng(134371)
-    trend_slopes = rng.uniform(-9, 9, trend_n)
-    assert len(trend_lens) == len(trend_slopes)
-    trend_slopes_extended_lists = [
-        [trend_slopes[i]] * trend_lens[i] for i in range(len(trend_lens))]
-    trend_slopes_extended = flatten_list_of_lists(trend_slopes_extended_lists)
-    assert len(trend_slopes_extended) == n_samples
-
-    # set first slope to zero so that doesn't change first time series value
-    trend_slopes_extended[0] = 0
-    trend = np.array(trend_slopes_extended).cumsum()
-
-    # trend_slope = 0.05
-
-    season_period = 500
-    sin_amplitude = 10
-    cos_amplitude = -10
-
-    time_idx = np.arange(n_samples)
-    # trend = trend_slope * time_idx
-    season_sin = sin_amplitude * np.sin(2 * np.pi * time_idx / season_period)
-    season_cos = cos_amplitude * np.cos(2 * np.pi * time_idx / season_period)
-
-    ar = np.array([1, 0.9])
-    ma = np.array([1, 1.9])
-    arma_process = ArmaProcess(ar, ma)
-
-    np.random.seed(374352)
-    arma_noise = arma_process.generate_sample(nsample=n_samples)
-
-    time_series = constant + trend + season_sin + season_cos + arma_noise
 
     plt.clf()
     plt.close()
 
     plt.figure(figsize=(12, 6))
     plt.plot(time_series)
-    # plt.plot(srs)
     plt.title('Generated Time Series with Trend, Seasonality, and ARMA Terms')
     plt.xlabel('Time')
     plt.ylabel('Value')
     plt.show()
+
+
 
 
 
