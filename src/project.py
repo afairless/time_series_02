@@ -97,6 +97,8 @@ def randomize_segment_lengths(
         min_idx = np.argmin(discrete_segment_lengths)
         discrete_segment_lengths[min_idx] -= difference
 
+    assert np.sum(discrete_segment_lengths) == total_n
+
     return discrete_segment_lengths
 
 
