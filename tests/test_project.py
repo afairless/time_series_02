@@ -1,40 +1,49 @@
  
-import pytest
+# import pytest
 
 from src.project import (
-    dummy_function01,
-    dummy_function02,
+    flatten_list_of_lists,
     )
 
 
-def test_dummy_function01_01():
+def test_flatten_list_of_lists_01():
     """
     Test valid input
     """
-
-    result = dummy_function01()
-    correct_result = 1
+    a_list = [[], [], []]
+    result = flatten_list_of_lists(a_list)
+    correct_result = []
     assert result == correct_result
 
 
-def test_dummy_function02_01():
-    """
-    Test input of wrong data type
-    """
-
-    input = -1
-
-    with pytest.raises(AssertionError):
-        result = dummy_function02(input)
-
-
-def test_dummy_function02_02():
+def test_flatten_list_of_lists_02():
     """
     Test valid input
     """
-
-    input = 1
-
-    result = dummy_function02(input)
-    correct_result = 2
+    a_list = [[1, 2], [3, 4], [5, 6]]
+    result = flatten_list_of_lists(a_list)
+    correct_result = [1, 2, 3, 4, 5, 6]
     assert result == correct_result
+
+
+def test_flatten_list_of_lists_03():
+    """
+    Test valid input
+    """
+    a_list = [[1], [2, 3, 4], [], [5, 6]]
+    result = flatten_list_of_lists(a_list)
+    correct_result = [1, 2, 3, 4, 5, 6]
+    assert result == correct_result
+
+
+# def test_dummy_function02_01():
+#     """
+#     Test input of wrong data type
+#     """
+
+#     input = -1
+
+#     with pytest.raises(AssertionError):
+#         result = dummy_function02(input)
+
+
