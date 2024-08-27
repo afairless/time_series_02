@@ -117,7 +117,7 @@ def main():
     trend_n = 5
     trend_lens = randomize_segment_lengths(n_samples, trend_n)
 
-    rng = np.random.default_rng(646733)
+    rng = np.random.default_rng(134371)
     trend_slopes = rng.uniform(-9, 9, trend_n)
     assert len(trend_lens) == len(trend_slopes)
     trend_slopes_extended_lists = [
@@ -125,17 +125,18 @@ def main():
     trend_slopes_extended = flatten_list_of_lists(trend_slopes_extended_lists)
     assert len(trend_slopes_extended) == n_samples
 
-    time_idx = np.arange(n_samples)
-    trend = trend_slopes_extended * time_idx
+    # set first slope to zero so that doesn't change first time series value
+    trend_slopes_extended[0] = 0
+    trend = np.array(trend_slopes_extended).cumsum()
 
-    trend_slope = 0.05
+    # trend_slope = 0.05
 
     season_period = 500
     sin_amplitude = 10
     cos_amplitude = -10
 
     time_idx = np.arange(n_samples)
-    trend = trend_slope * time_idx
+    # trend = trend_slope * time_idx
     season_sin = sin_amplitude * np.sin(2 * np.pi * time_idx / season_period)
     season_cos = cos_amplitude * np.cos(2 * np.pi * time_idx / season_period)
 
@@ -152,8 +153,8 @@ def main():
     plt.close()
 
     plt.figure(figsize=(12, 6))
-    # plt.plot(time_series)
-    plt.plot(srs)
+    plt.plot(time_series)
+    # plt.plot(srs)
     plt.title('Generated Time Series with Trend, Seasonality, and ARMA Terms')
     plt.xlabel('Time')
     plt.ylabel('Value')
