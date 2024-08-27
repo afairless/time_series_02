@@ -1,9 +1,11 @@
 #! /usr/bin/env python3
 
-from typing import Any
+import math
 import numpy as np
+from typing import Any
 import matplotlib.pyplot as plt
-from scipy.stats import beta, dirichlet
+from scipy.stats import dirichlet
+import statsmodels.api as sm
 from statsmodels.tsa.arima_process import ArmaProcess
 # from statsmodels.tsa.deterministic import DeterministicProcess
 
@@ -24,6 +26,54 @@ def dummy_function02(input: int) -> int:
     assert input > 0
 
     return input + 1
+
+
+def create_time_series(
+    n: int, n_trends: int, 
+    autogressive_order: int=3, moving_average_order: int=2, 
+    arma_std_factor: float=4, season_std_factor: float=9, 
+    seed: int=231562) -> np.ndarray:
+    """
+    Create time series data with multiple trends and seasonality added to output
+        from ARMA model
+    """
+
+    np.random.seed(seed)
+    arma = sm.tsa.arma_generate_sample(
+        autogressive_order, moving_average_order, n, burnin=max(20, n//10))
+
+    # add multiple trends across time series
+    trend_len_mean = n / n_trends
+    trend_len_min = math.floor(trend_len_mean / 2)
+    trend_len_max = math.ceil(trend_len_mean * 2)
+    trend_lens = np.random.randint(trend_len_min, trend_len_max, n_trends)
+    trend_lens = np.round((trend_lens / trend_lens.sum()) * n).astype(int)
+    trend_lens[-1] += n - trend_lens.sum()
+    assert trend_lens.sum() == n
+
+    trend_slopes = np.random.uniform(low=-3, high=3, size=n_trends)
+
+    assert len(trend_lens) == len(trend_slopes)
+    trends_by_n = [
+        range(1, trend_lens[i]+1) * trend_slopes[i] 
+        for i in range(n_trends)]
+    trend_ends = [e[-1] for e in trends_by_n]
+    trend_continues = [0] + trend_ends[:-1]
+    trend_continues = np.array(trend_continues).cumsum()
+    trends = np.concatenate([
+        e + trend_continues[i] 
+        for i, e in enumerate(trends_by_n)])
+
+    season = np.sin(np.pi * np.arange(n) / 6)
+
+    # re-scale ARMA output and seasonality
+    arma_factor = np.std(trends) / arma_std_factor
+    season_factor = np.std(trends) / season_std_factor 
+
+    # assemble all components of time series
+    time_series = arma_factor * arma + season_factor * season + trends
+
+    return time_series
 
 
 def randomize_segment_lengths(
@@ -57,6 +107,9 @@ def main():
     #   arbitrarily flatten trend
     #   shift constant
 
+    n = 400
+    n_trends = 7
+    srs = create_time_series(n, n_trends, 3, 2, 4, 9, 84558)
 
     n_samples = 100
     constant = np.zeros(n_samples)
@@ -73,7 +126,7 @@ def main():
     assert len(trend_slopes_extended) == n_samples
 
     time_idx = np.arange(n_samples)
-    trend = trend_slopes * time_idx
+    trend = trend_slopes_extended * time_idx
 
     trend_slope = 0.05
 
@@ -99,7 +152,8 @@ def main():
     plt.close()
 
     plt.figure(figsize=(12, 6))
-    plt.plot(time_series)
+    # plt.plot(time_series)
+    plt.plot(srs)
     plt.title('Generated Time Series with Trend, Seasonality, and ARMA Terms')
     plt.xlabel('Time')
     plt.ylabel('Value')
