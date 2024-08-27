@@ -1,7 +1,9 @@
 #! /usr/bin/env python3
 
+from typing import Any
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.stats import beta, dirichlet
 from statsmodels.tsa.arima_process import ArmaProcess
 # from statsmodels.tsa.deterministic import DeterministicProcess
 
@@ -31,19 +33,16 @@ def randomize_segment_lengths(
         segments
     """
 
-    segment_even_len = total_n // segment_n
-    segment_len_vary = int(np.floor(segment_even_len * 0.9))
+    proportions = dirichlet.rvs([2] * segment_n, size=1, random_state=seed)
+    factor = total_n / np.sum(proportions)
+    discrete_segment_lengths = np.round(proportions * factor).astype(int)
+    assert np.sum(discrete_segment_lengths) == total_n
+    
+    return discrete_segment_lengths[0]
 
-    np.random.seed(seed)
-    segment_lens = np.random.uniform(
-        segment_even_len - segment_len_vary, 
-        segment_even_len + segment_len_vary, 
-        segment_n)
-    np.append(segment_lens, total_n - np.sum(segment_lens))
 
-    assert (segment_lens > 0).all()
-
-    return segment_lens
+def flatten_list_of_lists(list_of_lists: list[list[Any]]) -> list[Any]:
+    return [item for sublist in list_of_lists for item in sublist]
 
 
 def main():
@@ -59,11 +58,22 @@ def main():
     #   shift constant
 
 
-    n_samples = 1000
+    n_samples = 100
     constant = np.zeros(n_samples)
 
     trend_n = 5
     trend_lens = randomize_segment_lengths(n_samples, trend_n)
+
+    rng = np.random.default_rng(646733)
+    trend_slopes = rng.uniform(-9, 9, trend_n)
+    assert len(trend_lens) == len(trend_slopes)
+    trend_slopes_extended_lists = [
+        [trend_slopes[i]] * trend_lens[i] for i in range(len(trend_lens))]
+    trend_slopes_extended = flatten_list_of_lists(trend_slopes_extended_lists)
+    assert len(trend_slopes_extended) == n_samples
+
+    time_idx = np.arange(n_samples)
+    trend = trend_slopes * time_idx
 
     trend_slope = 0.05
 
