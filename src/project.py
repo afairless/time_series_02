@@ -10,24 +10,6 @@ from statsmodels.tsa.arima_process import ArmaProcess
 # from statsmodels.tsa.deterministic import DeterministicProcess
 
 
-def dummy_function01() -> int:
-    """
-    This is a function
-    """
-
-    return 1
-
-
-def dummy_function02(input: int) -> int:
-    """
-    This is a function
-    """
-
-    assert input > 0
-
-    return input + 1
-
-
 def create_time_series_01(
     n: int, n_trends: int, 
     autogressive_order: int=3, moving_average_order: int=2, 
@@ -106,8 +88,35 @@ def flatten_list_of_lists(list_of_lists: list[list[Any]]) -> list[Any]:
     return [item for sublist in list_of_lists for item in sublist]
 
 
+def generate_and_combine_trends(
+    time_n: int, trend_n: int, 
+    trend_slope_min: float=-1, trend_slope_max: float=1,
+    seed: int=459170) -> np.ndarray:
+    """
+    Generate 'trend_n' trend segments with a total number of 'time_n' time steps 
+        where each segment has a randomized length and slope
+    """
+
+    trend_lens = randomize_segment_lengths(time_n, trend_n)
+    rng = np.random.default_rng(seed)
+    trend_slopes = rng.uniform(trend_slope_min, trend_slope_max, trend_n)
+    assert len(trend_lens) == len(trend_slopes)
+
+    trend_slopes_extended_lists = [
+        [trend_slopes[i]] * trend_lens[i] for i in range(len(trend_lens))]
+    trend_slopes_extended = flatten_list_of_lists(trend_slopes_extended_lists)
+    assert len(trend_slopes_extended) == time_n
+
+    # set first slope to zero so that doesn't change first time series value
+    trend_slopes_extended[0] = 0
+    trend = np.array(trend_slopes_extended).cumsum()
+
+    return trend
+
+
 def create_time_series_02(
-    time_n: int=100, constant: Sequence[float]=[0]*100, trend_n: int=1, 
+    time_n: int=100, constant: Sequence[float]=[0]*100, 
+    trend_n: int=1, trend_slope_min: float=-1, trend_slope_max: float=1,
     season_period: int=10, sin_amplitude: float=1, cos_amplitude: float=1, 
     autogressive_lag_polynomial_coefficient: float=0.5, 
     moving_average_lag_polynomial_coefficient: float=0.5, 
@@ -123,18 +132,8 @@ def create_time_series_02(
     # set multiple trends across time series
     ##################################################
 
-    trend_lens = randomize_segment_lengths(time_n, trend_n)
-    rng = np.random.default_rng(seed)
-    trend_slopes = rng.uniform(-9, 9, trend_n)
-    assert len(trend_lens) == len(trend_slopes)
-    trend_slopes_extended_lists = [
-        [trend_slopes[i]] * trend_lens[i] for i in range(len(trend_lens))]
-    trend_slopes_extended = flatten_list_of_lists(trend_slopes_extended_lists)
-    assert len(trend_slopes_extended) == time_n
-
-    # set first slope to zero so that doesn't change first time series value
-    trend_slopes_extended[0] = 0
-    trend = np.array(trend_slopes_extended).cumsum()
+    trend = generate_and_combine_trends(
+        time_n, trend_n, trend_slope_min, trend_slope_max, seed)
 
 
     # set seasonality across time series
@@ -183,16 +182,26 @@ def main():
 
     time_n = 100
     constant = [0] * time_n
+
+    # trend parameters
     trend_n = 5
+    trend_slope_min = -9 
+    trend_slope_max = 9
+
+    # season parameters
     season_period = 20
     sin_amplitude = 20
     cos_amplitude = 20
+
+    # ARMA parameters
     ar_lag_coef = 0.9
     ma_lag_coef = 1.9
     arma_factor = 7
+
     time_series = create_time_series_02(
-        time_n, constant, trend_n, season_period, sin_amplitude, cos_amplitude, 
-        ar_lag_coef, ma_lag_coef, arma_factor, 761824)
+        time_n, constant, trend_n, trend_slope_min, trend_slope_max, 
+        season_period, sin_amplitude, cos_amplitude, ar_lag_coef, ma_lag_coef, 
+        arma_factor, 761824)
 
 
     plt.clf()
