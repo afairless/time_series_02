@@ -2,7 +2,7 @@
 # import pytest
 import numpy as np
 
-from src.project import (
+from src.s01_generate_data import (
     randomize_segment_lengths,
     flatten_list_of_lists,
     generate_and_combine_trends,
@@ -79,8 +79,9 @@ def test_generate_and_combine_trends_01():
     trend_slope_min = -1 
     trend_slope_max = 1
 
-    result = generate_and_combine_trends(
+    result_all = generate_and_combine_trends(
         time_n, trend_n, trend_slope_min, trend_slope_max, seed)
+    result = result_all.combined_trend
 
     assert len(result) == time_n
 
@@ -101,8 +102,9 @@ def test_generate_and_combine_trends_02():
     trend_slope_min = 3 
     trend_slope_max = 3.03
 
-    result = generate_and_combine_trends(
+    result_all = generate_and_combine_trends(
         time_n, trend_n, trend_slope_min, trend_slope_max, seed)
+    result = result_all.combined_trend
 
     assert len(result) == time_n
 
@@ -127,8 +129,9 @@ def test_generate_and_combine_trends_03():
     trend_slope_min = -8 
     trend_slope_max = -7
 
-    result = generate_and_combine_trends(
+    result_all = generate_and_combine_trends(
         time_n, trend_n, trend_slope_min, trend_slope_max, seed)
+    result = result_all.combined_trend
 
     assert len(result) == time_n
 

@@ -1,13 +1,23 @@
 #! /usr/bin/env python3
 
 import math
-import numpy as np
+from dataclasses import dataclass
 from typing import Any, Iterable, Sequence
-import matplotlib.pyplot as plt
+
+import numpy as np
 from scipy.stats import dirichlet
 import statsmodels.api as sm
 from statsmodels.tsa.arima_process import ArmaProcess
 # from statsmodels.tsa.deterministic import DeterministicProcess
+
+import matplotlib.pyplot as plt
+
+
+@dataclass
+class TrendSegments:
+    lengths: np.ndarray
+    slopes: np.ndarray
+    combined_trend: np.ndarray
 
 
 def create_time_series_01(
@@ -91,7 +101,7 @@ def flatten_list_of_lists(list_of_lists: list[list[Any]]) -> list[Any]:
 def generate_and_combine_trends(
     time_n: int, trend_n: int, 
     trend_slope_min: float=-1, trend_slope_max: float=1,
-    seed: int=459170) -> np.ndarray:
+    seed: int=459170) -> TrendSegments:
     """
     Generate 'trend_n' trend segments with a total number of 'time_n' time steps 
         where each segment has a randomized length and slope
@@ -113,7 +123,9 @@ def generate_and_combine_trends(
     trend_slopes_extended[0] = 0
     trend = np.array(trend_slopes_extended).cumsum()
 
-    return trend
+    trend_segments = TrendSegments(trend_lens, trend_slopes, trend)
+
+    return trend_segments 
 
 
 def create_time_series_02(
@@ -134,8 +146,12 @@ def create_time_series_02(
     # set multiple trends across time series
     ##################################################
 
-    trend = generate_and_combine_trends(
+    trend_segments = generate_and_combine_trends(
         time_n, trend_n, trend_slope_min, trend_slope_max, seed)
+
+    trend_lengths = trend_segments.lengths
+    trend_slopes = trend_segments.slopes
+    trend = trend_segments.combined_trend
 
 
     # set seasonality across time series

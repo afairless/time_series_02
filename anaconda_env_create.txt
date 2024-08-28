@@ -1,0 +1,6 @@
+
+mamba create --name bayes_jupytext01 polars pandas numpy scipy statsmodels matplotlib requests pyarrow pytest pystan arviz pyro-ppl properscoring jupyter nbconvert jupytext 
+
+conda activate bayes_jupytext01
+
+mamba env export > environment.yml
