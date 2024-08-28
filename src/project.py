@@ -97,6 +97,8 @@ def generate_and_combine_trends(
         where each segment has a randomized length and slope
     """
 
+    assert trend_n > 0
+
     trend_lens = randomize_segment_lengths(time_n, trend_n)
     rng = np.random.default_rng(seed)
     trend_slopes = rng.uniform(trend_slope_min, trend_slope_max, trend_n)
@@ -171,11 +173,6 @@ def main():
     #     index=index, constant=True, period=3, order=2, seasonal=True)
     # dtrm_pd = dtrm_process.in_sample()
 
-    # alterations in series parameters:
-    #   use trig function for trend to change slope
-    #   arbitrarily flatten trend
-    #   shift constant
-
     # n = 400
     # n_trends = 7
     # srs = create_time_series_01(n, n_trends, 3, 2, 4, 9, 84558)
@@ -200,8 +197,8 @@ def main():
 
     time_series = create_time_series_02(
         time_n, constant, trend_n, trend_slope_min, trend_slope_max, 
-        season_period, sin_amplitude, cos_amplitude, ar_lag_coef, ma_lag_coef, 
-        arma_factor, 761824)
+        season_period, sin_amplitude, cos_amplitude, 
+        ar_lag_coef, ma_lag_coef, arma_factor, 761824)
 
 
     plt.clf()
