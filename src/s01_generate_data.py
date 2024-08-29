@@ -1,6 +1,7 @@
 #! /usr/bin/env python3
 
 import math
+import polars as pl
 from dataclasses import dataclass
 from typing import Any, Iterable, Sequence
 
@@ -15,9 +16,23 @@ import matplotlib.pyplot as plt
 
 @dataclass
 class TimeSeriesTrendSegments:
+
     trend_lengths: np.ndarray
     trend_slopes: np.ndarray
     time_series: np.ndarray
+
+    def __post_init__(self):
+
+        assert len(self.trend_lengths) > 0
+        assert len(self.trend_slopes) > 0
+        assert len(self.time_series) > 0
+
+        assert len(self.trend_lengths) == len(self.trend_slopes)
+
+        if self.time_series.ndim == 1:
+            assert len(self.time_series) == self.trend_lengths.sum()
+        else:
+            assert self.time_series.shape[1] == self.trend_lengths.sum()
 
 
 @dataclass
@@ -38,6 +53,15 @@ class TimeSeriesParameters:
     trend_lengths: np.ndarray
     trend_slopes: np.ndarray
     time_series: np.ndarray
+
+    def __post_init__(self):
+        assert len(self.constant) == self.time_n
+        assert len(self.trend_lengths) == self.trend_n
+        assert len(self.trend_slopes) == self.trend_n
+        assert self.time_series.shape == (self.series_n, self.time_n)
+        assert self.autogressive_lag_polynomial_coefficients[0] == 1
+        assert self.moving_average_lag_polynomial_coefficients[0] == 1
+        assert self.arma_scale > 0
 
 
 def create_time_series_01(
@@ -127,6 +151,7 @@ def generate_and_combine_trends(
         where each segment has a randomized length and slope
     """
 
+    assert time_n > 0
     assert trend_n > 0
 
     trend_lens = randomize_segment_lengths(time_n, trend_n)
@@ -207,6 +232,8 @@ def create_time_series_02(
     time_series = (
         constant_arr + trend_arr + season_sin_arr + season_cos_arr + arma_noise)
 
+    time_series.reshape(1, -1)
+    time_series.ndim
     time_series_with_trends = TimeSeriesTrendSegments(
         trend_lengths, trend_slopes, time_series)
 
@@ -214,6 +241,11 @@ def create_time_series_02(
 
 
 def generate_time_series_with_params() -> TimeSeriesParameters:
+    """
+    Generate time series data with specified parameters for trends, seasonality, 
+        ARMA error, etc. and return the parameters and series packaged together
+        in a dataclass
+    """
 
     # index = date_range('2000-1-1', freq='M', periods=240)
     # dtrm_process = DeterministicProcess(
@@ -249,7 +281,6 @@ def generate_time_series_with_params() -> TimeSeriesParameters:
         trend_n, trend_slope_min, trend_slope_max, 
         season_period, sin_amplitude, cos_amplitude, 
         ar_lag_coef, ma_lag_coef, arma_scale, seed)
-    ts = time_series.time_series
 
     ts_params = TimeSeriesParameters(
         time_n, series_n, constant, trend_n, trend_slope_min, trend_slope_max,
@@ -258,6 +289,18 @@ def generate_time_series_with_params() -> TimeSeriesParameters:
         time_series.time_series)
 
     return ts_params
+
+
+def convert_time_series_parameters_to_dataframe(
+    ts_params: TimeSeriesParameters) -> pl.DataFrame:
+
+    ts = ts_params.time_series
+    ts.shape
+
+
+
+
+    return pl.DataFrame()
 
 
 def main():
