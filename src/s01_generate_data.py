@@ -20,6 +20,26 @@ class TimeSeriesTrendSegments:
     time_series: np.ndarray
 
 
+@dataclass
+class TimeSeriesParameters:
+    time_n: int
+    series_n: int
+    constant: Sequence[float]
+    trend_n: int
+    trend_slope_min: float
+    trend_slope_max: float
+    season_period: int
+    sin_amplitude: float
+    cos_amplitude: float
+    autogressive_lag_polynomial_coefficients: np.ndarray
+    moving_average_lag_polynomial_coefficients: np.ndarray
+    arma_scale: float
+    seed: int
+    trend_lengths: np.ndarray
+    trend_slopes: np.ndarray
+    time_series: np.ndarray
+
+
 def create_time_series_01(
     n: int, n_trends: int, 
     autogressive_order: int=3, moving_average_order: int=2, 
@@ -193,7 +213,7 @@ def create_time_series_02(
     return time_series_with_trends 
 
 
-def main():
+def generate_time_series_with_params() -> TimeSeriesParameters:
 
     # index = date_range('2000-1-1', freq='M', periods=240)
     # dtrm_process = DeterministicProcess(
@@ -221,21 +241,36 @@ def main():
     # ARMA parameters
     ar_lag_coef = np.array([1, 0.9, 0.8])
     ma_lag_coef = np.array([1, 0.9, 0.8])
-    arma_scale = 2
+    arma_scale = 20
 
+    seed = 761824
     time_series = create_time_series_02(
         time_n, series_n, constant, 
         trend_n, trend_slope_min, trend_slope_max, 
         season_period, sin_amplitude, cos_amplitude, 
-        ar_lag_coef, ma_lag_coef, arma_scale, 761824)
+        ar_lag_coef, ma_lag_coef, arma_scale, seed)
     ts = time_series.time_series
 
+    ts_params = TimeSeriesParameters(
+        time_n, series_n, constant, trend_n, trend_slope_min, trend_slope_max,
+        season_period, sin_amplitude, cos_amplitude, ar_lag_coef, ma_lag_coef,
+        arma_scale, seed, time_series.trend_lengths, time_series.trend_slopes,
+        time_series.time_series)
+
+    return ts_params
+
+
+def main():
+
+    ts_params = generate_time_series_with_params()
+    ts = ts_params.time_series
 
     plt.clf()
     plt.close()
 
     plt.figure(figsize=(12, 6))
-    plt.plot(ts)
+    for s in ts:
+        plt.plot(s)
     plt.title('Generated Time Series with Trend, Seasonality, and ARMA Terms')
     plt.xlabel('Time')
     plt.ylabel('Value')
