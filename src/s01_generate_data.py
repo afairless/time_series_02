@@ -165,19 +165,27 @@ def create_time_series_02(
     # set ARMA noise across time series
     ##################################################
 
-    ar = np.array([1, autogressive_lag_polynomial_coefficients])
-    ma = np.array([1, moving_average_lag_polynomial_coefficients])
+    # ar = np.array([1, autogressive_lag_polynomial_coefficients])
+    # ma = np.array([1, moving_average_lag_polynomial_coefficients])
+    ar = autogressive_lag_polynomial_coefficients
+    ma = moving_average_lag_polynomial_coefficients
     arma_process = ArmaProcess(ar, ma) 
 
     np.random.seed(seed+1)
     arma_noise = arma_process.generate_sample(
-        nsample=time_n, scale=arma_scale, burnin=max(20, time_n//10))
+        nsample=(series_n, time_n), axis=1, scale=arma_scale, 
+        burnin=max(20, time_n//10))
 
 
     # combine all components into a single time series
     ##################################################
 
-    time_series = constant + trend + season_sin + season_cos + arma_noise
+    constant_arr = np.tile(constant, (series_n, 1))
+    trend_arr = np.tile(trend, (series_n, 1))
+    season_sin_arr = np.tile(season_sin, (series_n, 1))
+    season_cos_arr = np.tile(season_cos, (series_n, 1))
+    time_series = (
+        constant_arr + trend_arr + season_sin_arr + season_cos_arr + arma_noise)
 
     time_series_with_trends = TimeSeriesTrendSegments(
         trend_lengths, trend_slopes, time_series)
@@ -197,7 +205,7 @@ def main():
     # srs = create_time_series_01(n, n_trends, 3, 2, 4, 9, 84558)
 
     time_n = 100
-    series_n = 1
+    series_n = 2
     constant = [0] * time_n
 
     # trend parameters
@@ -213,13 +221,13 @@ def main():
     # ARMA parameters
     ar_lag_coef = np.array([1, 0.9, 0.8])
     ma_lag_coef = np.array([1, 0.9, 0.8])
-    arma_factor = 2
+    arma_scale = 2
 
     time_series = create_time_series_02(
         time_n, series_n, constant, 
         trend_n, trend_slope_min, trend_slope_max, 
         season_period, sin_amplitude, cos_amplitude, 
-        ar_lag_coef, ma_lag_coef, arma_factor, 761824)
+        ar_lag_coef, ma_lag_coef, arma_scale, 761824)
     ts = time_series.time_series
 
 
@@ -232,10 +240,6 @@ def main():
     plt.xlabel('Time')
     plt.ylabel('Value')
     plt.show()
-
-
-
-
 
 
 if __name__ == '__main__':
