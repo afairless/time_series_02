@@ -2,8 +2,8 @@
 
 import math
 import polars as pl
-from dataclasses import dataclass
-from typing import Any, Iterable, Sequence
+from dataclasses import dataclass, fields
+from typing import Any
 
 import numpy as np
 from scipy.stats import dirichlet
@@ -37,9 +37,10 @@ class TimeSeriesTrendSegments:
 
 @dataclass
 class TimeSeriesParameters:
+
     time_n: int
     series_n: int
-    constant: Sequence[float]
+    constant: np.ndarray
     trend_n: int
     trend_slope_min: float
     trend_slope_max: float
@@ -55,6 +56,7 @@ class TimeSeriesParameters:
     time_series: np.ndarray
 
     def __post_init__(self):
+
         assert len(self.constant) == self.time_n
         assert len(self.trend_lengths) == self.trend_n
         assert len(self.trend_slopes) == self.trend_n
@@ -174,7 +176,7 @@ def generate_and_combine_trends(
 
 
 def create_time_series_02(
-    time_n: int=100, series_n: int=1, constant: Sequence[float]=[0]*100, 
+    time_n: int=100, series_n: int=1, constant: np.ndarray=np.zeros(100),
     trend_n: int=1, trend_slope_min: float=-1, trend_slope_max: float=1,
     season_period: int=10, sin_amplitude: float=1, cos_amplitude: float=1, 
     autogressive_lag_polynomial_coefficients: np.ndarray=np.array([1, 1]), 
@@ -258,7 +260,7 @@ def generate_time_series_with_params() -> TimeSeriesParameters:
 
     time_n = 100
     series_n = 2
-    constant = [0] * time_n
+    constant = np.zeros(time_n)
 
     # trend parameters
     trend_n = 5
@@ -293,19 +295,66 @@ def generate_time_series_with_params() -> TimeSeriesParameters:
 
 def convert_time_series_parameters_to_dataframe(
     ts_params: TimeSeriesParameters) -> pl.DataFrame:
+    """
+    Extract the time series and its generating parameters from the dataclass and
+        store them in a DataFrame
+    If there is more than one generated time series, store each series on a 
+        separate row with its corresponding parameters
+    """
 
-    ts = ts_params.time_series
-    ts.shape
+    # verify that the intended number of time series matches the actual number
+    assert ts_params.time_series.shape[0] == ts_params.series_n
 
 
+    # extract parameters from dataclass fields and store in dataframe
+    ##################################################
+
+    df_dict = {}
+    for field in fields(ts_params):
+
+        is_scalar = (field.type == int) or (field.type == float)
+        if is_scalar:
+            df_dict[field.name] = [getattr(ts_params, field.name)]
+
+        elif field.type == np.ndarray and field.name != 'time_series':
+
+            # remove arrays that are too long and unwieldy to include in table
+            #   these arrays will usually include the vector of constants
+            # if len(getattr(ts_params, field.name)) < 20:
+            #     for i in range(len(getattr(ts_params, field.name))):
+            #         df_dict[f'{field.name}_{i}'] = [
+            #             getattr(ts_params, field.name)[i]]
+
+            # CORRECTION:  include the vector of constants
+            for i in range(len(getattr(ts_params, field.name))):
+                df_dict[f'{field.name}_{i}'] = [
+                    getattr(ts_params, field.name)[i]]
+
+    params_row_df = pl.DataFrame(df_dict)
+    params_df = pl.concat([params_row_df] * ts_params.series_n, how='vertical')
 
 
-    return pl.DataFrame()
+    # extract time series from dataclass and store in dataframe
+    ##################################################
+
+    colnames = ['ts_' + str(i) for i in range(ts_params.time_n)]
+    ts_df = pl.DataFrame(ts_params.time_series)
+    ts_df.columns = colnames
+
+
+    # combine parameters and time series into a single dataframe
+    ##################################################
+
+    ts_params_df = pl.concat([params_df, ts_df], how='horizontal')
+
+    return ts_params_df
 
 
 def main():
 
     ts_params = generate_time_series_with_params()
+    ts_params_df = convert_time_series_parameters_to_dataframe(ts_params)
+
     ts = ts_params.time_series
 
     plt.clf()
