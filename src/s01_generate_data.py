@@ -14,10 +14,10 @@ import matplotlib.pyplot as plt
 
 
 @dataclass
-class TrendSegments:
-    lengths: np.ndarray
-    slopes: np.ndarray
-    combined_trend: np.ndarray
+class TimeSeriesTrendSegments:
+    trend_lengths: np.ndarray
+    trend_slopes: np.ndarray
+    time_series: np.ndarray
 
 
 def create_time_series_01(
@@ -101,7 +101,7 @@ def flatten_list_of_lists(list_of_lists: list[list[Any]]) -> list[Any]:
 def generate_and_combine_trends(
     time_n: int, trend_n: int, 
     trend_slope_min: float=-1, trend_slope_max: float=1,
-    seed: int=459170) -> TrendSegments:
+    seed: int=459170) -> TimeSeriesTrendSegments:
     """
     Generate 'trend_n' trend segments with a total number of 'time_n' time steps 
         where each segment has a randomized length and slope
@@ -123,18 +123,18 @@ def generate_and_combine_trends(
     trend_slopes_extended[0] = 0
     trend = np.array(trend_slopes_extended).cumsum()
 
-    trend_segments = TrendSegments(trend_lens, trend_slopes, trend)
+    trend_segments = TimeSeriesTrendSegments(trend_lens, trend_slopes, trend)
 
     return trend_segments 
 
 
 def create_time_series_02(
-    time_n: int=100, constant: Sequence[float]=[0]*100, 
+    time_n: int=100, series_n: int=1, constant: Sequence[float]=[0]*100, 
     trend_n: int=1, trend_slope_min: float=-1, trend_slope_max: float=1,
     season_period: int=10, sin_amplitude: float=1, cos_amplitude: float=1, 
-    autogressive_lag_polynomial_coefficient: float=0.5, 
-    moving_average_lag_polynomial_coefficient: float=0.5, 
-    arma_factor: float=1, seed: int=231562) -> np.ndarray:
+    autogressive_lag_polynomial_coefficients: np.ndarray=np.array([1, 1]), 
+    moving_average_lag_polynomial_coefficients: np.ndarray=np.array([1, 1]), 
+    arma_scale: float=1, seed: int=231562) -> TimeSeriesTrendSegments:
     """
     Create time series data with multiple trends and seasonality added to output
         from ARMA model
@@ -149,9 +149,9 @@ def create_time_series_02(
     trend_segments = generate_and_combine_trends(
         time_n, trend_n, trend_slope_min, trend_slope_max, seed)
 
-    trend_lengths = trend_segments.lengths
-    trend_slopes = trend_segments.slopes
-    trend = trend_segments.combined_trend
+    trend_lengths = trend_segments.trend_lengths
+    trend_slopes = trend_segments.trend_slopes
+    trend = trend_segments.time_series
 
 
     # set seasonality across time series
@@ -165,21 +165,24 @@ def create_time_series_02(
     # set ARMA noise across time series
     ##################################################
 
-    ar = np.array([1, autogressive_lag_polynomial_coefficient])
-    ma = np.array([1, moving_average_lag_polynomial_coefficient])
-    arma_process = ArmaProcess(ar, ma)
+    ar = np.array([1, autogressive_lag_polynomial_coefficients])
+    ma = np.array([1, moving_average_lag_polynomial_coefficients])
+    arma_process = ArmaProcess(ar, ma) 
 
     np.random.seed(seed+1)
-    arma_noise = arma_process.generate_sample(nsample=time_n)
+    arma_noise = arma_process.generate_sample(
+        nsample=time_n, scale=arma_scale, burnin=max(20, time_n//10))
 
 
     # combine all components into a single time series
     ##################################################
 
-    time_series = (
-        constant + trend + season_sin + season_cos + arma_factor * arma_noise)
+    time_series = constant + trend + season_sin + season_cos + arma_noise
 
-    return time_series
+    time_series_with_trends = TimeSeriesTrendSegments(
+        trend_lengths, trend_slopes, time_series)
+
+    return time_series_with_trends 
 
 
 def main():
@@ -194,6 +197,7 @@ def main():
     # srs = create_time_series_01(n, n_trends, 3, 2, 4, 9, 84558)
 
     time_n = 100
+    series_n = 1
     constant = [0] * time_n
 
     # trend parameters
@@ -207,21 +211,23 @@ def main():
     cos_amplitude = 20
 
     # ARMA parameters
-    ar_lag_coef = 0.9
-    ma_lag_coef = 1.9
-    arma_factor = 7
+    ar_lag_coef = np.array([1, 0.9, 0.8])
+    ma_lag_coef = np.array([1, 0.9, 0.8])
+    arma_factor = 2
 
     time_series = create_time_series_02(
-        time_n, constant, trend_n, trend_slope_min, trend_slope_max, 
+        time_n, series_n, constant, 
+        trend_n, trend_slope_min, trend_slope_max, 
         season_period, sin_amplitude, cos_amplitude, 
         ar_lag_coef, ma_lag_coef, arma_factor, 761824)
+    ts = time_series.time_series
 
 
     plt.clf()
     plt.close()
 
     plt.figure(figsize=(12, 6))
-    plt.plot(time_series)
+    plt.plot(ts)
     plt.title('Generated Time Series with Trend, Seasonality, and ARMA Terms')
     plt.xlabel('Time')
     plt.ylabel('Value')

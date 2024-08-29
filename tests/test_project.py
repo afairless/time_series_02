@@ -81,7 +81,7 @@ def test_generate_and_combine_trends_01():
 
     result_all = generate_and_combine_trends(
         time_n, trend_n, trend_slope_min, trend_slope_max, seed)
-    result = result_all.combined_trend
+    result = result_all.time_series
 
     assert len(result) == time_n
 
@@ -104,7 +104,7 @@ def test_generate_and_combine_trends_02():
 
     result_all = generate_and_combine_trends(
         time_n, trend_n, trend_slope_min, trend_slope_max, seed)
-    result = result_all.combined_trend
+    result = result_all.time_series
 
     assert len(result) == time_n
 
@@ -131,7 +131,7 @@ def test_generate_and_combine_trends_03():
 
     result_all = generate_and_combine_trends(
         time_n, trend_n, trend_slope_min, trend_slope_max, seed)
-    result = result_all.combined_trend
+    result = result_all.time_series
 
     assert len(result) == time_n
 
