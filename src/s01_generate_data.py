@@ -1,6 +1,7 @@
 #! /usr/bin/env python3
 
 import polars as pl
+from pathlib import Path
 from dataclasses import dataclass, fields
 from typing import Any
 
@@ -192,53 +193,6 @@ def create_time_series(
     return time_series_with_trends 
 
 
-def create_time_series_with_params() -> TimeSeriesParameters:
-    """
-    Generate time series data with specified parameters for trends, seasonality, 
-        ARMA error, etc. and return the parameters and series packaged together
-        in a dataclass
-    """
-
-    # index = date_range('2000-1-1', freq='M', periods=240)
-    # dtrm_process = DeterministicProcess(
-    #     index=index, constant=True, period=3, order=2, seasonal=True)
-    # dtrm_pd = dtrm_process.in_sample()
-
-    time_n = 100
-    series_n = 2
-    constant = np.zeros(time_n)
-
-    # trend parameters
-    trend_n = 5
-    trend_slope_min = -9 
-    trend_slope_max = 9
-
-    # season parameters
-    season_period = 20
-    sin_amplitude = 20
-    cos_amplitude = 20
-
-    # ARMA parameters
-    ar_lag_coef = np.array([1, 0.9, 0.8])
-    ma_lag_coef = np.array([1, 0.9, 0.8])
-    arma_scale = 20
-
-    seed = 761824
-    time_series = create_time_series(
-        time_n, series_n, constant, 
-        trend_n, trend_slope_min, trend_slope_max, 
-        season_period, sin_amplitude, cos_amplitude, 
-        ar_lag_coef, ma_lag_coef, arma_scale, seed)
-
-    ts_params = TimeSeriesParameters(
-        time_n, series_n, constant, trend_n, trend_slope_min, trend_slope_max,
-        season_period, sin_amplitude, cos_amplitude, ar_lag_coef, ma_lag_coef,
-        arma_scale, seed, time_series.trend_lengths, time_series.trend_slopes,
-        time_series.time_series)
-
-    return ts_params
-
-
 def convert_time_series_parameters_to_dataframe(
     ts_params: TimeSeriesParameters) -> pl.DataFrame:
     """
@@ -296,23 +250,88 @@ def convert_time_series_parameters_to_dataframe(
     return ts_params_df
 
 
-def main():
+def plot_time_series(
+    time_series: np.ndarray, series_n_to_plot: int=1, 
+    output_filepath: Path=Path('plot.png')):
 
-    ts_params = create_time_series_with_params()
-    ts_params_df = convert_time_series_parameters_to_dataframe(ts_params)
+    assert series_n_to_plot <= time_series.shape[0]
 
-    ts = ts_params.time_series
+    # plt.figure(figsize=(12, 6))
+    for srs in time_series[:series_n_to_plot]:
+        plt.plot(srs)
+
+    plt.title('Time Series')
+    plt.xlabel('Time Index')
+    plt.ylabel('Value')
+
+    plt.savefig(output_filepath)
 
     plt.clf()
     plt.close()
 
-    plt.figure(figsize=(12, 6))
-    for s in ts:
-        plt.plot(s)
-    plt.title('Generated Time Series with Trend, Seasonality, and ARMA Terms')
-    plt.xlabel('Time')
-    plt.ylabel('Value')
-    plt.show()
+
+def create_time_series_with_params_example_01() -> TimeSeriesParameters:
+    """
+    Generate time series data with specified parameters for trends, seasonality, 
+        ARMA error, etc. and return the parameters and series packaged together
+        in a dataclass
+    """
+
+    # index = date_range('2000-1-1', freq='M', periods=240)
+    # dtrm_process = DeterministicProcess(
+    #     index=index, constant=True, period=3, order=2, seasonal=True)
+    # dtrm_pd = dtrm_process.in_sample()
+
+    time_n = 100
+    series_n = 2
+    constant = np.zeros(time_n)
+
+    # trend parameters
+    trend_n = 5
+    trend_slope_min = -9 
+    trend_slope_max = 9
+
+    # season parameters
+    season_period = 20
+    sin_amplitude = 20
+    cos_amplitude = 20
+
+    # ARMA parameters
+    ar_lag_coef = np.array([1, 0.9, 0.8])
+    ma_lag_coef = np.array([1, 0.9, 0.8])
+    arma_scale = 20
+
+    seed = 761824
+    time_series = create_time_series(
+        time_n, series_n, constant, 
+        trend_n, trend_slope_min, trend_slope_max, 
+        season_period, sin_amplitude, cos_amplitude, 
+        ar_lag_coef, ma_lag_coef, arma_scale, seed)
+
+    ts_params = TimeSeriesParameters(
+        time_n, series_n, constant, trend_n, trend_slope_min, trend_slope_max,
+        season_period, sin_amplitude, cos_amplitude, ar_lag_coef, ma_lag_coef,
+        arma_scale, seed, time_series.trend_lengths, time_series.trend_slopes,
+        time_series.time_series)
+
+    return ts_params
+
+
+def main():
+
+    ts_params = create_time_series_with_params_example_01()
+    ts_params_df = convert_time_series_parameters_to_dataframe(ts_params)
+
+    output_path = Path.cwd() / 'output'
+    output_filepath = output_path / 'time_series.png'
+    plot_time_series(ts_params.time_series, 2, output_filepath=output_filepath)
+
+    output_path = Path.cwd() / 'output'
+    output_filepath = output_path / 'time_series.parquet'
+    ts_params_df.write_parquet(output_filepath)
+
+    output_filepath = output_path / 'time_series.csv'
+    ts_params_df.write_csv(output_filepath)
 
 
 if __name__ == '__main__':
