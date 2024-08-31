@@ -185,8 +185,6 @@ def create_time_series(
     time_series = (
         constant_arr + trend_arr + season_sin_arr + season_cos_arr + arma_noise)
 
-    time_series.reshape(1, -1)
-    time_series.ndim
     time_series_with_trends = TimeSeriesTrendSegments(
         trend_lengths, trend_slopes, time_series)
 
@@ -256,9 +254,9 @@ def plot_time_series(
 
     assert series_n_to_plot <= time_series.shape[0]
 
-    # plt.figure(figsize=(12, 6))
+    # plt.figure(figsize=(12, 3))
     for srs in time_series[:series_n_to_plot]:
-        plt.plot(srs)
+        plt.plot(srs, alpha=0.5)
 
     plt.title('Time Series')
     plt.xlabel('Time Index')
@@ -317,14 +315,105 @@ def create_time_series_with_params_example_01() -> TimeSeriesParameters:
     return ts_params
 
 
+def create_arma_coefficients(
+    coefficient_n: int, 
+    start_beta_0: int, start_beta_1: int, 
+    decay_beta_0: int, decay_beta_1: int, 
+    seed: int=753197) -> np.ndarray:
+    """
+    Generate ARMA coefficients with a start value and a decay factor chosen
+        randomly from a beta distribution
+    The first lag polynomial coefficient is always set to 1
+    
+    'coefficient_n' - the number of coefficients to generate, including the
+        first coefficient which is always set to 1
+    """
+
+    assert start_beta_0 > 0
+    assert start_beta_1 > 0
+    assert decay_beta_0 > 0
+    assert decay_beta_1 > 0
+
+    rng = np.random.default_rng(seed)
+
+    coef_start = rng.beta(start_beta_0, start_beta_1, 1)[0]
+    coef_decay = rng.beta(decay_beta_0, decay_beta_1, 1)[0]
+    lag_coef = np.array(
+     [coef_start * coef_decay**i 
+      for i in range(coefficient_n-1)])
+    lag_coef = np.concatenate((np.array([1.]), lag_coef))
+
+    return lag_coef
+
+
+def create_time_series_with_params() -> TimeSeriesParameters:
+    """
+    Generate time series data with specified parameters for trends, seasonality, 
+        ARMA error, etc. and return the parameters and series packaged together
+        in a dataclass
+    """
+
+    # index = date_range('2000-1-1', freq='M', periods=240)
+    # dtrm_process = DeterministicProcess(
+    #     index=index, constant=True, period=3, order=2, seasonal=True)
+    # dtrm_pd = dtrm_process.in_sample()
+    seed = 761824
+
+    time_n = 1000
+    series_n = 10
+    constant = np.zeros(time_n)
+
+    # trend parameters
+    trend_n = 5
+    trend_slope_min = -9 
+    trend_slope_max = 9
+
+    # season parameters
+    rng = np.random.default_rng(seed)
+    season_period = rng.integers(4, time_n//10, 1)[0]
+    sin_amplitude = rng.integers(0, int(np.sqrt(time_n)), 1)[0]
+    cos_amplitude = rng.integers(0, int(np.sqrt(time_n)), 1)[0]
+
+    # ARMA parameters
+    coef_n = 10
+    ar_lag_coef = create_arma_coefficients(coef_n, 4, 2, 4, 2, seed+1) 
+    ma_lag_coef = create_arma_coefficients(coef_n, 4, 2, 4, 2, seed+2) 
+    arma_scale = rng.integers(0, int(np.sqrt(time_n)), 1)[0]
+
+    time_series = create_time_series(
+        time_n, series_n, constant, 
+        trend_n, trend_slope_min, trend_slope_max, 
+        season_period, sin_amplitude, cos_amplitude, 
+        ar_lag_coef, ma_lag_coef, arma_scale, seed)
+
+    ts_params = TimeSeriesParameters(
+        time_n, series_n, constant, trend_n, trend_slope_min, trend_slope_max,
+        season_period, sin_amplitude, cos_amplitude, ar_lag_coef, ma_lag_coef,
+        arma_scale, seed, time_series.trend_lengths, time_series.trend_slopes,
+        time_series.time_series)
+
+    return ts_params
+
+
 def main():
 
-    ts_params = create_time_series_with_params_example_01()
+    ts_params = create_time_series_with_params()
+    # ts_params = create_time_series_with_params_example_01()
     ts_params_df = convert_time_series_parameters_to_dataframe(ts_params)
 
+    series_plot_n = max(10, ts_params.series_n)
+
     output_path = Path.cwd() / 'output'
+
     output_filepath = output_path / 'time_series.png'
-    plot_time_series(ts_params.time_series, 2, output_filepath=output_filepath)
+    plot_time_series(
+        ts_params.time_series, series_plot_n, output_filepath=output_filepath)
+
+    time_idx_n = 100
+    output_filepath = output_path / 'time_series_segment01.png'
+    plot_time_series(
+        ts_params.time_series[:, :time_idx_n], series_plot_n, 
+        output_filepath=output_filepath)
 
     output_path = Path.cwd() / 'output'
     output_filepath = output_path / 'time_series.parquet'
