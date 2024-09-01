@@ -62,7 +62,7 @@ class TimeSeriesParameters:
         assert self.time_series.shape == (self.series_n, self.time_n)
         assert self.autogressive_lag_polynomial_coefficients[0] == 1
         assert self.moving_average_lag_polynomial_coefficients[0] == 1
-        assert self.arma_scale > 0
+        assert self.arma_scale >= 0
 
 
 def randomize_segment_lengths(
@@ -370,7 +370,8 @@ def create_arma_coefficients(
     return lag_coef
 
 
-def create_time_series_with_params() -> TimeSeriesParameters:
+def create_time_series_with_params(
+    seed: int=761824, series_n: int=1) -> TimeSeriesParameters:
     """
     Generate time series data with specified parameters for trends, seasonality, 
         ARMA error, etc. and return the parameters and series packaged together
@@ -381,29 +382,27 @@ def create_time_series_with_params() -> TimeSeriesParameters:
     # dtrm_process = DeterministicProcess(
     #     index=index, constant=True, period=3, order=2, seasonal=True)
     # dtrm_pd = dtrm_process.in_sample()
-    seed = 761824
 
     time_n = 1000
-    series_n = 10
     constant = np.zeros(time_n)
 
     # trend parameters
-    trend_n = 5
+    trend_n = 10
     trend_slope_min = -9 
     trend_slope_max = 9
-    last_segment_len = 200
+    last_segment_len = -1
 
     # season parameters
     rng = np.random.default_rng(seed)
     season_period = rng.integers(4, time_n//10, 1)[0]
-    sin_amplitude = rng.integers(0, int(np.sqrt(time_n)), 1)[0]
-    cos_amplitude = rng.integers(0, int(np.sqrt(time_n)), 1)[0]
+    sin_amplitude = rng.integers(0, int(8*np.sqrt(time_n)), 1)[0]
+    cos_amplitude = rng.integers(0, int(8*np.sqrt(time_n)), 1)[0]
 
     # ARMA parameters
     coef_n = 10
     ar_lag_coef = create_arma_coefficients(coef_n, 4, 2, 4, 2, seed+1) 
     ma_lag_coef = create_arma_coefficients(coef_n, 4, 2, 4, 2, seed+2) 
-    arma_scale = rng.integers(0, int(np.sqrt(time_n)), 1)[0]
+    arma_scale = rng.integers(0, int(8*np.sqrt(time_n)), 1)[0]
 
     time_series = create_time_series(
         time_n, series_n, constant, 
@@ -421,32 +420,56 @@ def create_time_series_with_params() -> TimeSeriesParameters:
     return ts_params
 
 
+def check_time_series_examples():
+
+    output_path = Path.cwd() / 'output' / 'example_series'
+    output_path.mkdir(exist_ok=True, parents=True)
+
+    seed = 934251
+    for i in range(20):
+        ts_params = create_time_series_with_params(seed+i, series_n=10)
+        # ts_params = create_time_series_with_params_example_01()
+        ts_params_df = convert_time_series_parameters_to_dataframe(ts_params)
+
+        series_plot_n = max(10, ts_params.series_n)
+
+        output_filepath = output_path / f'time_series_{i}.png'
+        plot_time_series(
+            ts_params.time_series, series_plot_n, output_filepath=output_filepath)
+
+        time_idx_n = 100
+        output_filepath = output_path / f'time_series_segment01_{i}.png'
+        plot_time_series(
+            ts_params.time_series[:, :time_idx_n], series_plot_n, 
+            output_filepath=output_filepath)
+
+        output_filepath = output_path / f'time_series_{i}.parquet'
+        ts_params_df.write_parquet(output_filepath)
+
+        # output_filepath = output_path / 'time_series_{i}.csv'
+        # ts_params_df.write_csv(output_filepath)
+
+
 def main():
 
-    ts_params = create_time_series_with_params()
-    # ts_params = create_time_series_with_params_example_01()
-    ts_params_df = convert_time_series_parameters_to_dataframe(ts_params)
-
-    series_plot_n = max(10, ts_params.series_n)
-
     output_path = Path.cwd() / 'output'
+    output_path.mkdir(exist_ok=True, parents=True)
 
-    output_filepath = output_path / 'time_series.png'
-    plot_time_series(
-        ts_params.time_series, series_plot_n, output_filepath=output_filepath)
+    seed = 457981
+    time_series_n = 1000
+    ts_params_dfs = []
+    for i in range(time_series_n):
+        ts_params = create_time_series_with_params(seed+i, series_n=1)
+        ts_params_df = convert_time_series_parameters_to_dataframe(ts_params)
+        ts_params_dfs.append(ts_params_df)
 
-    time_idx_n = 100
-    output_filepath = output_path / 'time_series_segment01.png'
-    plot_time_series(
-        ts_params.time_series[:, :time_idx_n], series_plot_n, 
-        output_filepath=output_filepath)
+    ts_df = pl.concat(ts_params_dfs, how='vertical')
 
-    output_path = Path.cwd() / 'output'
-    output_filepath = output_path / 'time_series.parquet'
-    ts_params_df.write_parquet(output_filepath)
+    output_filepath = output_path / f'time_series.parquet'
+    ts_df.write_parquet(output_filepath)
 
     output_filepath = output_path / 'time_series.csv'
-    ts_params_df.write_csv(output_filepath)
+    ts_df.head(20).write_csv(output_filepath)
 
 
 if __name__ == '__main__':
