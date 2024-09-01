@@ -11,19 +11,20 @@ from src.s01_generate_data import (
 
 def test_randomize_segment_lengths_01():
     """
-    Test valid input
+    Test valid input with default value for 'last_segment_len'
     """
     seed = 211612
     total_n = 10
     segment_n = 2
-    result = randomize_segment_lengths(total_n, segment_n, seed)
+    result = randomize_segment_lengths(total_n, segment_n, seed=seed)
     assert len(result) == segment_n
     assert result.sum() == total_n 
 
 
 def test_randomize_segment_lengths_02():
     """
-    Test several combinations of valid input
+    Test several combinations of valid input with default value for 
+        'last_segment_len'
     """
 
     seed = 211612
@@ -33,9 +34,45 @@ def test_randomize_segment_lengths_02():
     for total in total_n:
         for segment in segment_n:
             if segment < total:
-                result = randomize_segment_lengths(total, segment, seed)
+                result = randomize_segment_lengths(total, segment, seed=seed)
                 assert len(result) == segment
                 assert result.sum() == total
+
+
+def test_randomize_segment_lengths_03():
+    """
+    Test valid input with provided value for 'last_segment_len'
+    """
+    seed = 193945
+    total_n = 1000
+    segment_n = 7
+    last_segment_len = 197
+    result = randomize_segment_lengths(
+        total_n, segment_n, last_segment_len, seed)
+    assert len(result) == segment_n
+    assert result.sum() == total_n 
+
+
+def test_randomize_segment_lengths_04():
+    """
+    Test several combinations of valid input with provided value for 
+        'last_segment_len'
+    """
+
+    seed = 315912
+    total_n = range(20, 600, 13)
+    segment_n = range(1, 15, 3)
+    last_segment_len = range(10, 300, 7)
+
+    for total in total_n:
+        for segment in segment_n:
+            for last_segment in last_segment_len:
+                if segment < total:
+                    if last_segment < total:
+                        result = randomize_segment_lengths(
+                            total, segment, seed=seed)
+                        assert len(result) == segment
+                        assert result.sum() == total
 
 
 def test_flatten_list_of_lists_01():
@@ -76,11 +113,13 @@ def test_generate_and_combine_trends_01():
     seed = 827816
     time_n = 10
     trend_n = 1
+    last_segment_len = -1
     trend_slope_min = -1 
     trend_slope_max = 1
 
     result_all = generate_and_combine_trends(
-        time_n, trend_n, trend_slope_min, trend_slope_max, seed)
+        time_n, trend_n, last_segment_len, trend_slope_min, trend_slope_max, 
+        seed)
     result = result_all.time_series
 
     assert len(result) == time_n
@@ -99,11 +138,13 @@ def test_generate_and_combine_trends_02():
     seed = 789812
     time_n = 15
     trend_n = 2
+    last_segment_len = -1
     trend_slope_min = 3 
     trend_slope_max = 3.03
 
     result_all = generate_and_combine_trends(
-        time_n, trend_n, trend_slope_min, trend_slope_max, seed)
+        time_n, trend_n, last_segment_len, trend_slope_min, trend_slope_max, 
+        seed)
     result = result_all.time_series
 
     assert len(result) == time_n
@@ -126,11 +167,13 @@ def test_generate_and_combine_trends_03():
     seed = 789812
     time_n = 937
     trend_n = 13
+    last_segment_len = -1
     trend_slope_min = -8 
     trend_slope_max = -7
 
     result_all = generate_and_combine_trends(
-        time_n, trend_n, trend_slope_min, trend_slope_max, seed)
+        time_n, trend_n, last_segment_len, trend_slope_min, trend_slope_max, 
+        seed)
     result = result_all.time_series
 
     assert len(result) == time_n

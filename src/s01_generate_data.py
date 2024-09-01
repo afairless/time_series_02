@@ -66,7 +66,8 @@ class TimeSeriesParameters:
 
 
 def randomize_segment_lengths(
-    total_n: int, segment_n: int, seed=282840) -> np.ndarray:
+    total_n: int, segment_n: int, last_segment_len: int=-1, seed=282840
+    ) -> np.ndarray:
     """
     Divide 'total_n' into 'segment_n' segments and randomize the lengths of the
         segments
@@ -74,7 +75,26 @@ def randomize_segment_lengths(
 
     proportions = dirichlet.rvs([2] * segment_n, size=1, random_state=seed)
     factor = total_n / np.sum(proportions)
-    discrete_segment_lengths = np.round(proportions * factor).astype(int)[0]
+    discrete_segment_lengths = (proportions * factor)[0]
+
+
+    # if the length of the last segment is specified, adjust the last segment
+    #   length to the specified length and reallocate the difference
+    ##################################################
+
+    if last_segment_len > 0:
+        discrete_segment_lengths[-1] = last_segment_len
+        difference = np.sum(discrete_segment_lengths) - total_n
+        average_difference = difference / (segment_n - 1)
+        for i in range(segment_n - 1):
+            discrete_segment_lengths[i] -= average_difference
+
+    discrete_segment_lengths = np.round(discrete_segment_lengths).astype(int)
+
+
+    # if the sum of the segment lengths is not equal to the total number of time
+    #   steps, adjust the last segment length to make up the difference
+    ##################################################
 
     if np.sum(discrete_segment_lengths) > total_n:
         difference = np.sum(discrete_segment_lengths) - total_n
@@ -88,6 +108,7 @@ def randomize_segment_lengths(
 
     assert np.sum(discrete_segment_lengths) == total_n
 
+
     return discrete_segment_lengths
 
 
@@ -96,7 +117,7 @@ def flatten_list_of_lists(list_of_lists: list[list[Any]]) -> list[Any]:
 
 
 def generate_and_combine_trends(
-    time_n: int, trend_n: int, 
+    time_n: int, trend_n: int, last_segment_len: int=-1,
     trend_slope_min: float=-1, trend_slope_max: float=1,
     seed: int=459170) -> TimeSeriesTrendSegments:
     """
@@ -107,7 +128,7 @@ def generate_and_combine_trends(
     assert time_n > 0
     assert trend_n > 0
 
-    trend_lens = randomize_segment_lengths(time_n, trend_n)
+    trend_lens = randomize_segment_lengths(time_n, trend_n, last_segment_len)
     rng = np.random.default_rng(seed)
     trend_slopes = rng.uniform(trend_slope_min, trend_slope_max, trend_n)
     assert len(trend_lens) == len(trend_slopes)
@@ -128,7 +149,8 @@ def generate_and_combine_trends(
 
 def create_time_series(
     time_n: int=100, series_n: int=1, constant: np.ndarray=np.zeros(100),
-    trend_n: int=1, trend_slope_min: float=-1, trend_slope_max: float=1,
+    trend_n: int=1, last_segment_len: int=-1, 
+    trend_slope_min: float=-1, trend_slope_max: float=1, 
     season_period: int=10, sin_amplitude: float=1, cos_amplitude: float=1, 
     autogressive_lag_polynomial_coefficients: np.ndarray=np.array([1, 1]), 
     moving_average_lag_polynomial_coefficients: np.ndarray=np.array([1, 1]), 
@@ -145,7 +167,7 @@ def create_time_series(
     ##################################################
 
     trend_segments = generate_and_combine_trends(
-        time_n, trend_n, trend_slope_min, trend_slope_max, seed)
+        time_n, trend_n, last_segment_len, trend_slope_min, trend_slope_max, seed)
 
     trend_lengths = trend_segments.trend_lengths
     trend_slopes = trend_segments.trend_slopes
@@ -288,6 +310,7 @@ def create_time_series_with_params_example_01() -> TimeSeriesParameters:
     trend_n = 5
     trend_slope_min = -9 
     trend_slope_max = 9
+    last_segment_len = -1
 
     # season parameters
     season_period = 20
@@ -302,7 +325,8 @@ def create_time_series_with_params_example_01() -> TimeSeriesParameters:
     seed = 761824
     time_series = create_time_series(
         time_n, series_n, constant, 
-        trend_n, trend_slope_min, trend_slope_max, 
+        trend_n, last_segment_len, 
+        trend_slope_min, trend_slope_max, 
         season_period, sin_amplitude, cos_amplitude, 
         ar_lag_coef, ma_lag_coef, arma_scale, seed)
 
@@ -367,6 +391,7 @@ def create_time_series_with_params() -> TimeSeriesParameters:
     trend_n = 5
     trend_slope_min = -9 
     trend_slope_max = 9
+    last_segment_len = 200
 
     # season parameters
     rng = np.random.default_rng(seed)
@@ -382,7 +407,8 @@ def create_time_series_with_params() -> TimeSeriesParameters:
 
     time_series = create_time_series(
         time_n, series_n, constant, 
-        trend_n, trend_slope_min, trend_slope_max, 
+        trend_n, last_segment_len, 
+        trend_slope_min, trend_slope_max, 
         season_period, sin_amplitude, cos_amplitude, 
         ar_lag_coef, ma_lag_coef, arma_scale, seed)
 
