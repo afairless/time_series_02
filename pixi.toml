@@ -1,7 +1,7 @@
 [project]
-name = "project_name"
+name = "time_series"
 version = "0.1.0"
-description = "Add a short description here"
+description = "Predicting synthetic time series data"
 channels = ["conda-forge"]
 platforms = ["linux-64"]
 
@@ -11,3 +11,16 @@ linux = "5.4.0"
 [tasks]
 
 [dependencies]
+python = ">=3.12.5,<3.13"
+polars = ">=1.6.0,<1.7"
+numpy = ">=2.1.0,<2.2"
+scipy = ">=1.14.1,<1.15"
+statsmodels = ">=0.14.2,<0.15"
+matplotlib = ">=3.9.2,<3.10"
+
+[feature.dev.dependencies]
+pytest = "*"
+
+[environments]
+default = { features = ["dev"], solve-group = "prod" }
+prod = { features = [], solve-group = "prod" }
