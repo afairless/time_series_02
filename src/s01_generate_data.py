@@ -181,9 +181,8 @@ def generate_and_combine_trends(
     trend_slopes = rng.uniform(trend_slope_min, trend_slope_max, trend_n)
     assert len(trend_lens) == len(trend_slopes)
 
-    trend_slopes_extended_lists = [
-        [trend_slopes[i]] * trend_lens[i] for i in range(len(trend_lens))]
-    trend_slopes_extended = flatten_list_of_lists(trend_slopes_extended_lists)
+    trend_slopes_extended = expand_values_by_lengths_into_vector(
+        trend_slopes, trend_lens)
     assert len(trend_slopes_extended) == time_n
 
     # set first slope to zero so that doesn't change first time series value

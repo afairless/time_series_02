@@ -37,8 +37,12 @@ def main():
     trend_lengths = df[row_idx, trend_len_colnames].to_numpy()[0]
     trend_slopes = df[row_idx, trend_slope_colnames].to_numpy()[0]
 
-    trend_slopes_extended = expand_values_by_lengths_into_vector(trend_slopes, trend_lengths)
+    trend_slopes_extended = expand_values_by_lengths_into_vector(
+        trend_slopes, trend_lengths)
     assert len(trend_slopes_extended) == df[row_idx, 'time_n']
+
+    trend_slopes_extended[0] = 0
+    trend = np.array(trend_slopes_extended).cumsum()
 
     ts_colnames = [e for e in df.columns if e[:3] == 'ts_']
 
