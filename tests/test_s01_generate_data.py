@@ -1,10 +1,11 @@
  
-# import pytest
+import pytest
 import numpy as np
 
 from src.s01_generate_data import (
     randomize_segment_lengths,
     flatten_list_of_lists,
+    expand_values_by_lengths_into_vector,
     generate_and_combine_trends,
     )
 
@@ -103,6 +104,127 @@ def test_flatten_list_of_lists_03():
     result = flatten_list_of_lists(a_list)
     correct_result = [1, 2, 3, 4, 5, 6]
     assert result == correct_result
+
+
+def test_expand_values_by_lengths_into_vector_01():
+    """
+    Test invalid input:  lists are different lengths
+    """
+    values = [1, 2, 3]
+    lengths = [1]
+
+    with pytest.raises(AssertionError):
+        result = expand_values_by_lengths_into_vector(values, lengths)
+
+
+def test_expand_values_by_lengths_into_vector_02():
+    """
+    Test empty input
+    """
+    values = []
+    lengths = []
+    result = expand_values_by_lengths_into_vector(values, lengths)
+    correct_result = []
+    assert result == correct_result
+
+
+def test_expand_values_by_lengths_into_vector_03():
+    """
+    Test valid input:  one value, one length of zero
+    """
+    values = [7]
+    lengths = [0]
+    result = expand_values_by_lengths_into_vector(values, lengths)
+    correct_result = []
+    assert result == correct_result
+
+
+def test_expand_values_by_lengths_into_vector_04():
+    """
+    Test valid input:  one value, one length
+    """
+    values = [7]
+    lengths = [3]
+    result = expand_values_by_lengths_into_vector(values, lengths)
+    correct_result = [7, 7, 7]
+    assert result == correct_result
+
+
+def test_expand_values_by_lengths_into_vector_05():
+    """
+    Test valid input:  multiple values and lengths of zero
+    """
+    values = [1, 2, 3]
+    lengths = [0, 0, 0]
+    result = expand_values_by_lengths_into_vector(values, lengths)
+    correct_result = []
+    assert result == correct_result
+
+
+def test_expand_values_by_lengths_into_vector_06():
+    """
+    Test valid input:  multiple values and lengths
+    """
+    values = [1, 2, 3]
+    lengths = [1, 1, 1]
+    result = expand_values_by_lengths_into_vector(values, lengths)
+    correct_result = [1, 2, 3]
+    assert result == correct_result
+
+
+def test_expand_values_by_lengths_into_vector_07():
+    """
+    Test valid input:  multiple values and lengths
+    """
+    values = [1, 2, 3]
+    lengths = [1, 0, 1]
+    result = expand_values_by_lengths_into_vector(values, lengths)
+    correct_result = [1, 3]
+    assert result == correct_result
+
+
+def test_expand_values_by_lengths_into_vector_08():
+    """
+    Test valid input:  multiple values and lengths
+    """
+    values = [1, 2, 3]
+    lengths = [3, 1, 7]
+    result = expand_values_by_lengths_into_vector(values, lengths)
+    correct_result = [1, 1, 1, 2, 3, 3, 3, 3, 3, 3, 3]
+    assert result == correct_result
+
+
+def test_expand_values_by_lengths_into_vector_09():
+    """
+    Test valid input:  multiple values and lengths
+    """
+    values = ['a', 'b', 'c']
+    lengths = [2, 0, 4]
+    result = expand_values_by_lengths_into_vector(values, lengths)
+    correct_result = ['a', 'a', 'c', 'c', 'c', 'c']
+    assert result == correct_result
+
+
+def test_expand_values_by_lengths_into_vector_10():
+    """
+    Test valid input
+    """
+    values =  np.array([1, 2, 3])
+    lengths = np.array([1, 1, 1])
+    result = expand_values_by_lengths_into_vector(values, lengths)
+    correct_result =  np.array([1, 2, 3])
+    np.testing.assert_array_equal(result, correct_result)
+
+
+def test_expand_values_by_lengths_into_vector_11():
+    """
+    Test invalid input:  negative length
+    """
+    values =  np.array([1, 2, 3])
+    lengths = np.array([1, -1, 1])
+
+    with pytest.raises(AssertionError):
+        result = expand_values_by_lengths_into_vector(values, lengths)
 
 
 def test_generate_and_combine_trends_01():

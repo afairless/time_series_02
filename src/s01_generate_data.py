@@ -3,7 +3,7 @@
 import polars as pl
 from pathlib import Path
 from dataclasses import dataclass, fields
-from typing import Any
+from typing import Any, Sequence
 
 import numpy as np
 from scipy.stats import dirichlet
@@ -114,6 +114,54 @@ def randomize_segment_lengths(
 
 def flatten_list_of_lists(list_of_lists: list[list[Any]]) -> list[Any]:
     return [item for sublist in list_of_lists for item in sublist]
+
+
+def expand_values_by_lengths_into_vector(
+    value_arr: Sequence[Any] | np.ndarray, 
+    length_arr: Sequence[int] | np.ndarray):
+    """
+    Given two 1-dimensional vectors (e.g., lists, tuples, Numpy arrays) of equal
+        length where the values in 'length_arr' provide lengths for the 
+        corresponding values in 'value_arr', repeat the values in 'value_arr'
+        by their corresponding lengths and combine them into a single vector
+
+    Example:
+        value_arr = [1, 2, 3]
+        length_arr = [1, 2, 3]
+        expand_values_by_lengths_into_vector(value_arr, length_arr)
+        >>> [1, 2, 2, 3, 3, 3]
+    """
+
+
+    # INPUT DATA PRE-CHECKS
+    ##################################################
+
+    assert len(value_arr) == len(length_arr)
+
+    if isinstance(length_arr, np.ndarray):
+        assert np.issubdtype(length_arr.dtype, np.integer)
+        assert (length_arr >= 0).all()
+    else:
+        for length in length_arr:
+            assert isinstance(length, int)
+            assert length >= 0
+
+
+    # EXPAND VECTOR BY LENGTHS
+    ##################################################
+
+    one_arr_lists = [
+        [value_arr[i]] * length_arr[i] for i in range(len(length_arr))]
+    one_arr = flatten_list_of_lists(one_arr_lists)
+
+
+    # OUTPUT DATA POST-PROCESSING
+    ##################################################
+
+    if isinstance(value_arr, np.ndarray):
+        one_arr = np.array(one_arr)
+
+    return one_arr
 
 
 def generate_and_combine_trends(
@@ -463,7 +511,7 @@ def main():
         ts_params_df = convert_time_series_parameters_to_dataframe(ts_params)
         ts_params_dfs.append(ts_params_df)
 
-    ts_df = pl.concat(ts_params_dfs, how='vertical')
+    ts_df = pl.concat(ts_params_dfs, how='vertical').with_row_index()
 
     output_filepath = output_path / f'time_series.parquet'
     ts_df.write_parquet(output_filepath)
