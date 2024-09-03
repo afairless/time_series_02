@@ -1,11 +1,20 @@
 #! /usr/bin/env python3
 
+import numpy as np
 import polars as pl
 from pathlib import Path
 import matplotlib.pyplot as plt
 
 
+def root_median_squared_error(y_true, y_pred):
+    return np.sqrt(np.median((y_true - y_pred) ** 2))
+
+
 def main():
+
+    # metrics:  RMSE, MAE, RMdSE, MdAE, 
+    #   plus those 4 relative to benchmark (probably naive and seasonal naive) 
+    #   maybe also relative to in-sample, i.e., scaled errors
 
     input_path = Path.cwd() / 'output'
     input_filepath = input_path / f'time_series.parquet'
