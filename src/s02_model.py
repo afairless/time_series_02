@@ -6,6 +6,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 
 import statsmodels.tsa.stattools as tsa_tools
+import statsmodels.graphics.tsaplots as tsa_plots
 
 if __name__ == '__main__':
     from s01_generate_data import (
@@ -73,6 +74,204 @@ def extract_trend_from_time_series_dataframe(
     trend = np.array(trend_slopes_extended).cumsum()
 
     return trend
+
+
+def stationarity_tests(
+    ts_train: np.ndarray, detrend_ts_train: np.ndarray, md: list[str]
+    ) -> list[str]:
+
+    # Augmented Dickey-Fuller unit root test')
+    ################################################## 
+    # https://otexts.com/fpp3/stationarity.html
+    # https://www.statsmodels.org/dev/examples/notebooks/generated/stationarity_detrending_adf_kpss.html
+    # https://www.machinelearningplus.com/time-series/arima-model-time-series-forecasting-python/
+
+    md.append('### Augmented Dickey-Fuller unit root test')
+    md.append(
+        'https://www.statsmodels.org/dev/generated/statsmodels.tsa.stattools.adfuller.html')
+    md.append('\n')
+
+    md.append(
+        '"The Augmented Dickey-Fuller test can be used to test for a unit root '
+        'in a univariate process in the presence of serial correlation."')
+    md.append('\n')
+    md.append(
+        '"The null hypothesis of the Augmented Dickey-Fuller is that there is '
+        'a unit root, with the alternative that there is no unit root."')
+    md.append('\n')
+
+    adf = tsa_tools.adfuller(ts_train)
+    md.append('\n')
+    md.append('-##--##--##--##--##--##--##--##--##--##-')
+    md.append('\n')
+    md.append('Time series training segment ADF')
+    md.append('\n')
+    md.append(
+        f'ADF = {adf[0]}\n, p = {adf[1]}\n, number of lags used = {adf[2]}\n, '
+        f'nobs = {adf[3]}\n')
+    md.append(f'critical values = {adf[4]}')
+    md.append('\n')
+    md.append(
+        'Null hypothesis that there is a unit root clearly not rejected; '
+        'trend is present ')
+    md.append('\n')
+
+    adf = tsa_tools.adfuller(detrend_ts_train)
+    md.append('\n')
+    md.append('-##--##--##--##--##--##--##--##--##--##-')
+    md.append('\n')
+    md.append('Detrended time series training segment ADF')
+    md.append('\n')
+    md.append(
+        f'ADF = {adf[0]}\n, p = {adf[1]}\n, number of lags used = {adf[2]}\n, '
+        f'nobs = {adf[3]}\n')
+    md.append(f'critical values = {adf[4]}')
+    md.append('\n')
+    md.append(
+        'Null hypothesis that there is a unit root clearly rejected; '
+        'trend is not present.')
+    md.append('\n')
+
+
+    # Kwiatkowski-Phillips-Schmidt-Shin (KPSS) test
+    ################################################## 
+
+    md.append('## Kwiatkowski-Phillips-Schmidt-Shin (KPSS) test')
+    md.append(
+        'https://www.statsmodels.org/stable/generated/statsmodels.tsa.stattools.kpss.html')
+    md.append('\n')
+
+    md.append(
+        '"Computes the Kwiatkowski-Phillips-Schmidt-Shin (KPSS) test for the '
+        'null hypothesis that x is level or trend stationary."')
+
+    kpss = tsa_tools.kpss(ts_train)
+    md.append('\n')
+    md.append('-##--##--##--##--##--##--##--##--##--##-')
+    md.append('\n')
+    md.append('Time series training segment KPSS')
+    md.append('\n')
+    md.append(
+        f'KPSS = {kpss[0]}\n, p = {kpss[1]}\n, lag truncation = {kpss[2]}\n')
+    md.append(f'critical values = {kpss[3]}')
+    md.append('\n')
+    md.append(
+        '<stdin>:1: InterpolationWarning: The test statistic is outside of '
+        'the range of p-values available in the look-up table. The actual '
+        'p-value is smaller than the p-value returned.')
+    md.append('\n')
+    md.append(
+        'Null hypothesis of stationarity clearly rejected; trend is present ')
+    md.append('\n')
+
+
+    kpss = tsa_tools.kpss(detrend_ts_train)
+    md.append('\n')
+    md.append('-##--##--##--##--##--##--##--##--##--##-')
+    md.append('\n')
+    md.append('Detrended Time series training segment KPSS')
+    md.append('\n')
+    md.append(
+        f'KPSS = {kpss[0]}\n, p = {kpss[1]}\n, lag truncation = {kpss[2]}\n')
+    md.append(f'critical values = {kpss[3]}')
+    md.append('\n')
+    md.append(
+        '<stdin>:1: InterpolationWarning: The test statistic is outside of '
+        'the range of p-values available in the look-up table. The actual '
+        'p-value is greater than the p-value returned.')
+    md.append('\n')
+    md.append(
+        'Null hypothesis of stationarity not rejected; trend is not present ')
+    md.append('\n')
+
+    return md
+
+
+def plot_time_series_differenced_and_autocorrelation(
+    ts: np.ndarray, output_filepath: Path=Path('plot.png')):
+    """
+
+    Adapted from:
+        https://www.machinelearningplus.com/time-series/arima-model-time-series-forecasting-python/
+    """
+
+    ts_srs = pl.DataFrame(ts)[:, 0]
+
+    plt.rcParams.update({'figure.figsize': (16, 10)})
+
+    fig, axes = plt.subplots(3, 3, sharex=False)
+
+    # Original Series
+    axes[0, 0].plot(ts_srs); axes[0, 0].set_title('Original Series')
+    tsa_plots.plot_acf(ts_srs, ax=axes[0, 1], lags=len(ts_srs)-1)
+    tsa_plots.plot_pacf(ts_srs, ax=axes[0, 2], lags=len(ts_srs)//4)
+    # tsa_plots.plot_pacf(ts_srs, ax=axes[0, 2])
+
+    # 1st Differencing
+    ts_1diff = ts_srs.diff()
+    axes[1, 0].plot(ts_1diff); axes[1, 0].set_title('1st Order Differencing')
+    tsa_plots.plot_acf(ts_1diff.drop_nulls(), ax=axes[1, 1])
+    tsa_plots.plot_pacf(
+        ts_1diff.drop_nulls(), ax=axes[1, 2], lags=len(ts_srs)//4)
+
+    # 2nd Differencing
+    ts_2diff = ts_srs.diff()
+    axes[2, 0].plot(ts_2diff); axes[2, 0].set_title('2nd Order Differencing')
+    tsa_plots.plot_acf(ts_2diff.drop_nulls(), ax=axes[2, 1])
+    tsa_plots.plot_pacf(
+        ts_2diff.drop_nulls(), ax=axes[2, 2], lags=len(ts_srs)//4)
+
+    plt.tight_layout()
+
+    plt.savefig(output_filepath)
+    plt.clf()
+    plt.close()
+
+
+def plot_differencing_and_autocorrelation(
+    ts: np.ndarray, output_path: Path, md: list[str]) -> list[str]:
+
+    # plot differencing and (partial) autocorrelation
+    ################################################## 
+
+    md.append('## Plot differencing and (partial) autocorrelation')
+    md.append('\n')
+
+    output_filepath = output_path / 'time_series_diff_autocorr.png'
+    plot_time_series_differenced_and_autocorrelation(ts, output_filepath)
+    md.append(f'![Image]({output_filepath.name})')
+    md.append('\n')
+
+    plt.rcParams.update({'figure.figsize': (6, 4)})
+
+    output_filepath = output_path / 'ts_1st_diff_autocorr.png'
+    ts_srs = pl.DataFrame(ts)[:, 0]
+    tsa_plots.plot_acf(ts_srs.diff().drop_nulls(), lags=120)
+    plt.savefig(output_filepath)
+    plt.clf()
+    plt.close()
+    md.append(f'![Image]({output_filepath.name})')
+    md.append('\n')
+
+    output_filepath = output_path / 'ts_2nd_diff_autocorr.png'
+    ts_srs = pl.DataFrame(ts)[:, 0]
+    tsa_plots.plot_acf(ts_srs.diff().diff().drop_nulls(), lags=120)
+    plt.savefig(output_filepath)
+    plt.clf()
+    plt.close()
+    md.append(f'![Image]({output_filepath.name})')
+    md.append('\n')
+
+    output_filepath = output_path / 'ts_3rd_diff_autocorr.png'
+    ts_srs = pl.DataFrame(ts)[:, 0]
+    tsa_plots.plot_acf(ts_srs.diff().diff().diff().drop_nulls(), lags=120)
+    plt.savefig(output_filepath)
+    plt.clf()
+    plt.close()
+    md.append(f'![Image]({output_filepath.name})')
+    md.append('\n')
+
+    return md
 
 
 def main():
@@ -167,103 +366,18 @@ def main():
         'https://www.statsmodels.org/dev/examples/notebooks/generated/stationarity_detrending_adf_kpss.html')
     md.append('\n')
 
-    # 
+
+    # Augmented Dickey-Fuller unit root test')
+    # Kwiatkowski-Phillips-Schmidt-Shin (KPSS) test
     ################################################## 
-    # https://otexts.com/fpp3/stationarity.html
-    # https://www.statsmodels.org/dev/examples/notebooks/generated/stationarity_detrending_adf_kpss.html
-    # https://www.machinelearningplus.com/time-series/arima-model-time-series-forecasting-python/
 
-    md.append('### Augmented Dickey-Fuller unit root test')
-    md.append(
-        'https://www.statsmodels.org/dev/generated/statsmodels.tsa.stattools.adfuller.html')
-    md.append('\n')
-
-    md.append(
-        '"The Augmented Dickey-Fuller test can be used to test for a unit root '
-        'in a univariate process in the presence of serial correlation."')
-    md.append(
-        '"The null hypothesis of the Augmented Dickey-Fuller is that there is '
-        'a unit root, with the alternative that there is no unit root."')
-    md.append('\n')
-
-    adf = tsa_tools.adfuller(ts_train)
-    md.append('--------------------')
-    md.append('Time series training segment ADF')
-    md.append('\n')
-    md.append(
-        f'ADF = {adf[0]}\n, p = {adf[1]}\n, number of lags used = {adf[2]}\n, '
-        f'nobs = {adf[3]}\n')
-    md.append(f'critical values = {adf[4]}')
-    md.append('\n')
-    md.append(
-        'Null hypothesis that there is a unit root clearly not rejected; '
-        'trend is present ')
-    md.append('\n')
-
-    adf = tsa_tools.adfuller(detrend_ts_train)
-    md.append('--------------------')
-    md.append('Detrended time series training segment ADF')
-    md.append('\n')
-    md.append(
-        f'ADF = {adf[0]}\n, p = {adf[1]}\n, number of lags used = {adf[2]}\n, '
-        f'nobs = {adf[3]}\n')
-    md.append(f'critical values = {adf[4]}')
-    md.append('\n')
-    md.append(
-        'Null hypothesis that there is a unit root clearly rejected; '
-        'trend is not present.')
-    md.append('\n')
+    md = stationarity_tests(ts_train, detrend_ts_train, md)
 
 
-    # 
+    # plot differencing and (partial) autocorrelation
     ################################################## 
-    # https://otexts.com/fpp3/stationarity.html
-    # https://www.statsmodels.org/dev/examples/notebooks/generated/stationarity_detrending_adf_kpss.html
-    # https://www.machinelearningplus.com/time-series/arima-model-time-series-forecasting-python/
 
-    md.append('### Kwiatkowski-Phillips-Schmidt-Shin (KPSS) test')
-    md.append(
-    'https://www.statsmodels.org/stable/generated/statsmodels.tsa.stattools.kpss.html')
-    md.append('\n')
-
-    md.append(
-        '"Computes the Kwiatkowski-Phillips-Schmidt-Shin (KPSS) test for the '
-        'null hypothesis that x is level or trend stationary."')
-
-    kpss = tsa_tools.kpss(ts_train)
-    md.append('--------------------')
-    md.append('Time series training segment KPSS')
-    md.append('\n')
-    md.append(
-        f'KPSS = {kpss[0]}\n, p = {kpss[1]}\n, lag truncation = {kpss[2]}\n')
-    md.append(f'critical values = {kpss[3]}')
-    md.append('\n')
-    md.append(
-        '<stdin>:1: InterpolationWarning: The test statistic is outside of '
-        'the range of p-values available in the look-up table. The actual '
-        'p-value is smaller than the p-value returned.')
-    md.append('\n')
-    md.append(
-        'Null hypothesis of stationarity clearly rejected; trend is present ')
-    md.append('\n')
-
-
-    kpss = tsa_tools.kpss(detrend_ts_train)
-    md.append('--------------------')
-    md.append('Detrended Time series training segment KPSS')
-    md.append('\n')
-    md.append(
-        f'KPSS = {kpss[0]}\n, p = {kpss[1]}\n, lag truncation = {kpss[2]}\n')
-    md.append(f'critical values = {kpss[3]}')
-    md.append('\n')
-    md.append(
-        '<stdin>:1: InterpolationWarning: The test statistic is outside of '
-        'the range of p-values available in the look-up table. The actual '
-        'p-value is greater than the p-value returned.')
-    md.append('\n')
-    md.append(
-        'Null hypothesis of stationarity not rejected; trend is not present ')
-    md.append('\n')
+    md = plot_differencing_and_autocorrelation(ts, output_path, md)
 
 
 
