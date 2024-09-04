@@ -41,6 +41,10 @@ def write_list_to_text_file(
             txt_file.write('\n')
 
 
+def convert_path_to_relative_path_str(path: Path) -> str:
+    return str(path).replace(str(Path.cwd()), '.')
+
+
 def root_median_squared_error(y_true, y_pred):
     return np.sqrt(np.median((y_true - y_pred) ** 2))
 
@@ -107,7 +111,7 @@ def main():
     plot_time_series(ts.reshape(1, -1), 1, plot_filepath)
     md.append('Full time series')
     md.append('\n')
-    md.append(f'![Image]({plot_filepath})')
+    md.append(f'![Image]({plot_filepath.name})')
     md.append('\n')
 
     detrend_ts = ts - trend
@@ -115,7 +119,7 @@ def main():
     plot_time_series(detrend_ts.reshape(1, -1), 1, plot_filepath)
     md.append('Full detrended time series')
     md.append('\n')
-    md.append(f'![Image]({plot_filepath})')
+    md.append(f'![Image]({plot_filepath.name})')
     md.append('\n')
 
     ts_train = ts[:test_start_idx]
