@@ -6,6 +6,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 
 import statsmodels.tsa.stattools as tsa_tools
+import statsmodels.tsa.statespace.sarimax as sarimax
 import statsmodels.graphics.tsaplots as tsa_plots
 
 if __name__ == '__main__':
@@ -244,6 +245,8 @@ def plot_differencing_and_autocorrelation(
 
     plt.rcParams.update({'figure.figsize': (6, 4)})
 
+    # autocorrelation
+
     output_filepath = output_path / 'ts_1st_diff_autocorr.png'
     ts_srs = pl.DataFrame(ts)[:, 0]
     tsa_plots.plot_acf(ts_srs.diff().drop_nulls(), lags=120)
@@ -271,10 +274,63 @@ def plot_differencing_and_autocorrelation(
     md.append(f'![Image]({output_filepath.name})')
     md.append('\n')
 
+    # partial autocorrelation
+
+    output_filepath = output_path / 'ts_1st_diff_p_autocorr.png'
+    ts_srs = pl.DataFrame(ts)[:, 0]
+    tsa_plots.plot_pacf(ts_srs.diff().drop_nulls(), lags=60)
+    plt.savefig(output_filepath)
+    plt.clf()
+    plt.close()
+    md.append(f'![Image]({output_filepath.name})')
+    md.append('\n')
+
+    output_filepath = output_path / 'ts_2nd_diff_p_autocorr.png'
+    ts_srs = pl.DataFrame(ts)[:, 0]
+    tsa_plots.plot_pacf(ts_srs.diff().diff().drop_nulls(), lags=60)
+    plt.savefig(output_filepath)
+    plt.clf()
+    plt.close()
+    md.append(f'![Image]({output_filepath.name})')
+    md.append('\n')
+
+    output_filepath = output_path / 'ts_3rd_diff_p_autocorr.png'
+    ts_srs = pl.DataFrame(ts)[:, 0]
+    tsa_plots.plot_pacf(ts_srs.diff().diff().diff().drop_nulls(), lags=60)
+    plt.savefig(output_filepath)
+    plt.clf()
+    plt.close()
+    md.append(f'![Image]({output_filepath.name})')
+    md.append('\n')
+
     return md
 
 
-def main():
+def plot_time_series_autocorrelation(
+    ts: list[np.ndarray], output_filepath: Path=Path('plot.png')):
+    """
+
+    Adapted from:
+        https://www.machinelearningplus.com/time-series/arima-model-time-series-forecasting-python/
+    """
+
+    plt.rcParams.update({'figure.figsize': (16, 3*len(ts))})
+
+    fig, axes = plt.subplots(len(ts), 3, sharex=False)
+
+    for i, _ in enumerate(ts):
+        axes[i, 0].plot(ts[i]); axes[i, 0].set_title(f'Series #{i}')
+        tsa_plots.plot_acf(ts[i], ax=axes[i, 1])
+        tsa_plots.plot_pacf(ts[i], ax=axes[i, 2])
+
+    plt.tight_layout()
+
+    plt.savefig(output_filepath)
+    plt.clf()
+    plt.close()
+
+
+def exploratory01():
 
     # metrics:  RMSE, MAE, RMdSE, MdAE, 
     #   plus those 4 relative to benchmark (probably naive and seasonal naive) 
@@ -289,7 +345,7 @@ def main():
     input_filepath = input_path / f'time_series.parquet'
     df = pl.read_parquet(input_filepath)
 
-    output_path = input_path / 'model01'
+    output_path = input_path / 'model01' / 'explore'
     output_path.mkdir(exist_ok=True, parents=True)
 
     md_filepath = output_path / 'model01.md'
@@ -297,11 +353,11 @@ def main():
     md.append('# Classical ARIMA-style analysis/modeling')
     md.append('\n')
 
-    df.columns
+    # df.columns
 
-    for e in df.columns:
-        if 'constant' not in e and e[:3] != 'ts_':
-            print(e)
+    # for e in df.columns:
+    #     if 'constant' not in e and e[:3] != 'ts_':
+    #         print(e)
 
 
     row_idx = 0
@@ -311,6 +367,7 @@ def main():
     test_start_idx = train_len
 
     ts_colnames = [e for e in df.columns if e[:3] == 'ts_']
+    arma_colnames = [e for e in df.columns if 'lag_polynomial_coefficients' in e]
 
 
     # plot full time series
@@ -374,16 +431,177 @@ def main():
     md = stationarity_tests(ts_train, detrend_ts_train, md)
 
 
-    # plot differencing and (partial) autocorrelation
+    # plot differencing and (partial) autocorrelation, full series
     ################################################## 
 
     md = plot_differencing_and_autocorrelation(ts, output_path, md)
 
 
+    # detrend and deseason time series train segment
+    ################################################## 
+
+    md.append('## Detrend and deseason time series train segment')
+    md.append('\n')
+
+    ts_train_srs = pl.DataFrame(ts_train)[:, 0]
+    ts_train_1diff = ts_train_srs.diff().drop_nulls()
+    adf = tsa_tools.adfuller(ts_train_1diff)
+    kpss = tsa_tools.kpss(ts_train_1diff)
+    md.append(
+        'The 1st-order difference of the series training segment has ADF '
+        f'p-value = {adf[1]:.3f} and KPSS p-value = {kpss[1]:.3f}, verifying '
+        'a lack of trend')
+    md.append('\n')
 
 
     write_list_to_text_file(md, md_filepath, True)
 
 
+def exploratory02():
+    # The ACF and PACF plots show the seasonality and the PACF shows notable
+    #   down-spikes for several of the first lags
+    # Because the data are synthetic, I know that the AR coefficients are
+    #   substantially higher than the MA coefficients, but with both in play
+    #   this isn't obvious from the plots, and this following advice doesn't 
+    #   provide a firm direction
+
+    # https://otexts.com/fpp3/non-seasonal-arima.html
+    #
+    # The data may follow an ARIMA(p,d, 0) model if the ACF and PACF plots of 
+    #   the differenced data show the following patterns:
+    #
+    # the ACF is exponentially decaying or sinusoidal;
+    # there is a significant spike at lag p in the PACF, but none beyond lag p.
+    #
+    # The data may follow an ARIMA(0,d, q) model if the ACF and PACF plots of 
+    #   the differenced data show the following patterns:
+    #
+    # the PACF is exponentially decaying or sinusoidal;
+    # there is a significant spike at lag q in the ACF, but none beyond lag q.
+
+    # Based on the following discussion of seasonal ARMA terms, the PACF shows
+    #   exponential decay while the ACF shows spikes at regular intervals, 
+    #   suggesting a seasonal MA term is appropriate
+
+    # https://otexts.com/fpp3/seasonal-arima.html
+    #
+    # The seasonal part of an AR or MA model will be seen in the seasonal lags 
+    #   of the PACF and ACF. For example, an ARIMA(0,0,0)(0,0,1)12 model will 
+    #   show:
+    #
+    # a spike at lag 12 in the ACF but no other significant spikes;
+    # exponential decay in the seasonal lags of the PACF (i.e., at lags 12, 24, 36, …).
+    #
+    # Similarly, an ARIMA(0,0,0)(1,0,0)12 model will show:
+    #
+    # exponential decay in the seasonal lags of the ACF;
+    # a single significant spike at lag 12 in the PACF.
+
+    # According to this, one does seasonal differencing first:
+    #   https://otexts.com/fpp3/seasonal-arima.html
+
+    input_path = Path.cwd() / 'output'
+    input_filepath = input_path / f'time_series.parquet'
+    df = pl.read_parquet(input_filepath)
+
+    output_path = input_path / 'model01' / 'sarima01'
+    output_path.mkdir(exist_ok=True, parents=True)
+
+    md_filepath = output_path / 'sarima01.md'
+    md = []
+
+
+    row_idx = 0
+    # trend = extract_trend_from_time_series_dataframe(df, row_idx)
+
+    train_len = int(df[row_idx, 'time_n'] * 0.6)
+    test_start_idx = train_len
+
+    ts_colnames = [e for e in df.columns if e[:3] == 'ts_']
+    ts = df[row_idx, ts_colnames].to_numpy().reshape(-1)
+    # detrend_ts = ts - trend
+    ts_train = ts[:test_start_idx]
+
+    ts_train_season_diff_1 = sarimax.diff(
+        ts_train, k_diff=0, k_seasonal_diff=1, seasonal_periods=6)
+    ts_train_season_diff_2 = sarimax.diff(
+        ts_train, k_diff=1, k_seasonal_diff=1, seasonal_periods=6)
+
+
+    md.append('# Looking at differencing')
+    md.append('\n')
+
+    output_filepath = output_path / 'time_series_season_diff.png'
+    plt.plot(ts_train, alpha=0.5, color='blue')
+    plt.plot(ts_train_season_diff_1, alpha=0.5, color='green')
+    plt.plot(ts_train_season_diff_2, alpha=0.5, color='orange')
+    plt.title('Time series and seasonal differencing')
+    plt.savefig(output_filepath)
+    plt.clf()
+    plt.close()
+
+    md.append(
+        'Time series (blue), with seasonal differencing only (green), and '
+        'with seasonal and regular differencing (orange)')
+    md.append('\n')
+    md.append(f'![Image]({output_filepath.name})')
+    md.append('\n')
+
+    output_filepath = output_path / 'time_series_season_diff_autocorr.png'
+    ts_series_by_row = [
+        ts_train, ts_train_season_diff_1, ts_train_season_diff_2]
+    plot_time_series_autocorrelation(ts_series_by_row, output_filepath)
+
+    md.append(
+        'Time series (Series #0), with seasonal differencing only '
+        '(Series #1), and with seasonal and regular differencing (Series #2)')
+    md.append('\n')
+    md.append(f'![Image]({output_filepath.name})')
+    md.append('\n')
+
+    md.append(
+        'Time series with seasonal differencing only (Series #1) shows best '
+        'autocorrelation profile')
+
+    order = (0, 0, 0)
+    season_period = df[0, 'season_period']
+    seasonal_order = (0, 0, 1, season_period)
+
+    # dir(sarimax.diff())
+    # sari = sarimax.SARIMAX(
+
+
+    write_list_to_text_file(md, md_filepath, True)
+
+
+def main():
+
+    input_path = Path.cwd() / 'output'
+    input_filepath = input_path / f'time_series.parquet'
+    df = pl.read_parquet(input_filepath)
+
+    output_path = input_path / 'model01' / 'sarima02'
+    output_path.mkdir(exist_ok=True, parents=True)
+
+    md_filepath = output_path / 'sarima02.md'
+    md = []
+
+    row_idx = 0
+    # trend = extract_trend_from_time_series_dataframe(df, row_idx)
+
+    train_len = int(df[row_idx, 'time_n'] * 0.6)
+    test_start_idx = train_len
+
+    ts_colnames = [e for e in df.columns if e[:3] == 'ts_']
+    ts = df[row_idx, ts_colnames].to_numpy().reshape(-1)
+    # detrend_ts = ts - trend
+    ts_train = ts[:test_start_idx]
+
+    ts_train_season_diff = sarimax.diff(
+        ts_train, k_diff=0, k_seasonal_diff=1, seasonal_periods=6)
+
+
+
 if __name__ == '__main__':
-    main()
+    exploratory01()
+    exploratory02()
