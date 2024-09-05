@@ -563,14 +563,6 @@ def exploratory02():
         'Time series with seasonal differencing only (Series #1) shows best '
         'autocorrelation profile')
 
-    order = (0, 0, 0)
-    season_period = df[0, 'season_period']
-    seasonal_order = (0, 0, 1, season_period)
-
-    # dir(sarimax.diff())
-    # sari = sarimax.SARIMAX(
-
-
     write_list_to_text_file(md, md_filepath, True)
 
 
@@ -602,8 +594,6 @@ def exploratory03():
         ts_train, k_diff=1, k_seasonal_diff=0, seasonal_periods=6)
     ts_train_season_diff_1 = sarimax.diff(
         ts_train, k_diff=0, k_seasonal_diff=1, seasonal_periods=6)
-    ts_train_season_diff_2 = sarimax.diff(
-        ts_train, k_diff=1, k_seasonal_diff=1, seasonal_periods=6)
 
 
     md.append('# Looking at differencing')
@@ -611,43 +601,255 @@ def exploratory03():
 
     output_filepath = output_path / 'time_series_season_diff.png'
     plt.plot(ts_train, alpha=0.5, color='blue')
-    plt.plot(ts_train_season_diff_1, alpha=0.5, color='green')
-    plt.plot(ts_train_season_diff_2, alpha=0.5, color='orange')
+    plt.plot(ts_train_season_diff_0, alpha=0.5, color='green')
+    plt.plot(ts_train_season_diff_1, alpha=0.5, color='orange')
     plt.title('Time series and seasonal differencing')
+    plt.tight_layout()
     plt.savefig(output_filepath)
     plt.clf()
     plt.close()
 
     md.append(
-        'Time series (blue), with seasonal differencing only (green), and '
-        'with seasonal and regular differencing (orange)')
+        'Time series (blue), with simple differencing only (green), and '
+        'with seasonal differencing only (orange)')
     md.append('\n')
     md.append(f'![Image]({output_filepath.name})')
     md.append('\n')
 
     output_filepath = output_path / 'time_series_season_diff_autocorr.png'
     ts_series_by_row = [
-        ts_train, ts_train_season_diff_1, ts_train_season_diff_2]
+        ts_train, ts_train_season_diff_0, ts_train_season_diff_1]
     plot_time_series_autocorrelation(ts_series_by_row, output_filepath)
 
     md.append(
-        'Time series (Series #0), with seasonal differencing only '
-        '(Series #1), and with seasonal and regular differencing (Series #2)')
+        'Time series (Series #0), with simple differencing only (Series #1), '
+        'and with seasonal differencing only (Series #2)')
     md.append('\n')
     md.append(f'![Image]({output_filepath.name})')
     md.append('\n')
 
     md.append(
-        'Time series with seasonal differencing only (Series #1) shows best '
-        'autocorrelation profile')
+        'The seasonal differencing only (Series #1) does better than the '
+        'simple/regular differencing')
+    md.append('\n')
+
+    md.append(
+        'The PACF spikes at 6, 12, 18, and 24 (where 6 is the seasonal period) '
+        'suggest a seasonal AR term.  The spikes at 18 and 24 are very small, '
+        'and the spike at 12 is not large, so I am unsure how large the term '
+        'should be.  Probably best to start at 1, see the effects, and then '
+        'perhaps increase from there.')
+    md.append('\n')
+    md.append(
+        'Both ACF and PACF show spikes at one, but only ACF spikes at 7. '
+        'That might suggest a seasonal MA term of 2, or else a non-seasonal '
+        'AR or MA term of 1, but it might be best again to apply one change at '
+        'a time.')
+    md.append('\n')
 
     order = (0, 0, 0)
     season_period = df[0, 'season_period']
-    seasonal_order = (0, 0, 1, season_period)
+    assert season_period == 6
+    # seasonal, AR = 1, D = 1, MA = 0
+    seasonal_order = (1, 1, 0, season_period)
 
-    # dir(sarimax.diff())
-    # sari = sarimax.SARIMAX(
+    write_list_to_text_file(md, md_filepath, True)
 
+
+def exploratory04():
+
+    input_path = Path.cwd() / 'output'
+    input_filepath = input_path / f'time_series.parquet'
+    df = pl.read_parquet(input_filepath)
+
+    output_path = input_path / 'model01' / 'differencing03'
+    output_path.mkdir(exist_ok=True, parents=True)
+
+    md_filepath = output_path / 'differencing03.md'
+    md = []
+
+
+    row_idx = 0
+    # trend = extract_trend_from_time_series_dataframe(df, row_idx)
+
+    train_len = int(df[row_idx, 'time_n'] * 0.6)
+    test_start_idx = train_len
+
+    ts_colnames = [e for e in df.columns if e[:3] == 'ts_']
+    ts = df[row_idx, ts_colnames].to_numpy().reshape(-1)
+    # detrend_ts = ts - trend
+    ts_train = ts[:test_start_idx]
+
+    ts_train_season_diff = sarimax.diff(
+        ts_train, k_diff=0, k_seasonal_diff=1, seasonal_periods=6)
+
+    order = (0, 0, 0)
+    season_period = df[0, 'season_period']
+    assert season_period == 6
+    # seasonal, AR = 1, D = 1, MA = 0
+    seasonal_order = (1, 1, 0, season_period)
+
+    model = sarimax.SARIMAX(
+        ts_train_season_diff, order=order, seasonal_order=seasonal_order).fit()
+    fittedvalues = model.fittedvalues
+    assert isinstance(fittedvalues, np.ndarray)
+
+
+    md.append('# Looking at model fit on differenced time series')
+    md.append('\n')
+
+    output_filepath = output_path / 'time_series_season_diff.png'
+    plt.plot(ts_train_season_diff, alpha=0.5, color='blue')
+    plt.plot(fittedvalues, alpha=0.5, color='orange')
+    plt.title('Time series and seasonal differencing')
+    plt.tight_layout()
+    plt.savefig(output_filepath)
+    plt.clf()
+    plt.close()
+
+    md.append(
+        'Time series with seasonal differencing only (blue), and fitted values '
+        'from SARIMAX model with p, d, q = 0, 0, 0 and P, D, Q = 1, 1, 0 '
+        '(orange)')
+    md.append('\n')
+    md.append(f'![Image]({output_filepath.name})')
+    md.append('\n')
+
+    output_filepath = output_path / 'time_series_season_diff_autocorr.png'
+    ts_series_by_row = [ts_train_season_diff, fittedvalues]
+    plot_time_series_autocorrelation(ts_series_by_row, output_filepath)
+
+    md.append(
+        'Time series with seasonal differencing only (Series #0), and fitted '
+        'values from SARIMAX model with p, d, q = 0, 0, 0 and P, D, Q = 1, 1, 0 '
+        '(Series #1)')
+    md.append('\n')
+    md.append(f'![Image]({output_filepath.name})')
+    md.append('\n')
+
+    md.append(
+        'Adding the seasonal AR = 1 term with the fitted model nearly '
+        'eliminated the seasonal PACF spikes.  Both ACF and PACF show some '
+        'small spikes at 6 and 12, so an additional seasonal term of order 2 '
+        'might help.  Additionally, both ACF and PACF show large spikes at 1, '
+        'so a non-seasonal AR or MA term of order 1 would be useful. ')
+    md.append('\n')
+
+    # magnitudes of spike at 1 on ACF and PACF are nearly identical, so I don't
+    #   think it matters much whether I put the term on AR or MA
+    # p, d, q = 0, 0, 1 
+    order = (0, 0, 1)
+    season_period = df[0, 'season_period']
+    assert season_period == 6
+    # seasonal, AR = 1, D = 1, MA = 0
+    seasonal_order = (1, 1, 0, season_period)
+
+    write_list_to_text_file(md, md_filepath, True)
+
+
+def exploratory05():
+
+    input_path = Path.cwd() / 'output'
+    input_filepath = input_path / f'time_series.parquet'
+    df = pl.read_parquet(input_filepath)
+
+    output_path = input_path / 'model01' / 'differencing04'
+    output_path.mkdir(exist_ok=True, parents=True)
+
+    md_filepath = output_path / 'differencing04.md'
+    md = []
+
+
+    row_idx = 0
+    # trend = extract_trend_from_time_series_dataframe(df, row_idx)
+
+    train_len = int(df[row_idx, 'time_n'] * 0.6)
+    test_start_idx = train_len
+
+    ts_colnames = [e for e in df.columns if e[:3] == 'ts_']
+    ts = df[row_idx, ts_colnames].to_numpy().reshape(-1)
+    # detrend_ts = ts - trend
+    ts_train = ts[:test_start_idx]
+
+    ts_train_season_diff = sarimax.diff(
+        ts_train, k_diff=0, k_seasonal_diff=1, seasonal_periods=6)
+
+    # model 1
+    ##################################################
+    order = (0, 0, 0)
+    season_period = df[0, 'season_period']
+    assert season_period == 6
+    # seasonal, AR = 1, D = 1, MA = 0
+    seasonal_order = (1, 1, 0, season_period)
+
+    model_1 = sarimax.SARIMAX(
+        ts_train_season_diff, order=order, seasonal_order=seasonal_order).fit()
+    fittedvalues_1 = model_1.fittedvalues
+    assert isinstance(fittedvalues_1, np.ndarray)
+
+
+    # model 2
+    ##################################################
+    # p, d, q = 0, 0, 1 
+    order = (0, 0, 1)
+    season_period = df[0, 'season_period']
+    assert season_period == 6
+    # seasonal, AR = 1, D = 1, MA = 0
+    seasonal_order = (1, 1, 0, season_period)
+
+    model_2 = sarimax.SARIMAX(
+        ts_train_season_diff, order=order, seasonal_order=seasonal_order).fit()
+    fittedvalues_2 = model_2.fittedvalues
+    assert isinstance(fittedvalues_2, np.ndarray)
+
+
+    md.append('# Looking at model fit on differenced time series')
+    md.append('\n')
+
+    output_filepath = output_path / 'time_series_season_diff.png'
+    plt.plot(ts_train_season_diff, alpha=0.5, color='blue')
+    plt.plot(fittedvalues_1, alpha=0.5, color='green')
+    plt.plot(fittedvalues_2, alpha=0.5, color='orange')
+    plt.title('Time series and seasonal differencing')
+    plt.tight_layout()
+    plt.savefig(output_filepath)
+    plt.clf()
+    plt.close()
+
+    md.append(
+        'Time series with seasonal differencing only (blue), and fitted values '
+        'from SARIMAX model with p, d, q = 0, 0, 0 and P, D, Q = 1, 1, 0 '
+        '(green), and with p, d, q = 0, 0, 1 and P, D, Q = 1, 1, 0 (orange)')
+    md.append('\n')
+    md.append(f'![Image]({output_filepath.name})')
+    md.append('\n')
+
+    output_filepath = output_path / 'time_series_season_diff_autocorr.png'
+    ts_series_by_row = [ts_train_season_diff, fittedvalues_1, fittedvalues_2]
+    plot_time_series_autocorrelation(ts_series_by_row, output_filepath)
+
+    md.append(
+        'Time series with seasonal differencing only (Series #0), and fitted '
+        'values from SARIMAX model with p, d, q = 0, 0, 0 and P, D, Q = 1, 1, 0 '
+        '(Series #1), and with p, d, q = 0, 0, 1 and P, D, Q = 1, 1, 0 (Series '
+        '#2)')
+    md.append('\n')
+    md.append(f'![Image]({output_filepath.name})')
+    md.append('\n')
+
+    md.append(
+        'Adding the non-seasonal MA = 1 term made the ACF and PACF spikes at 1 '
+        'smaller and reversed their direction, but it magnified spikes at 6 '
+        'and 11, especially on the PACF. ')
+    md.append('\n')
+
+    md.append(
+        'Also, the variability of the fitted values for both models is much '
+        'smaller than for the differenced series, suggesting that a more '
+        'complex model would be needed -- a conclusion supported by the small, '
+        'persisting spikes in the ACF and PACF and by the parameters by which '
+        'I created the synthetic data.')
+    md.append('\n')
 
     write_list_to_text_file(md, md_filepath, True)
 
@@ -683,3 +885,6 @@ def main():
 if __name__ == '__main__':
     exploratory01()
     exploratory02()
+    exploratory03()
+    exploratory04()
+    exploratory05()
