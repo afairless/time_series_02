@@ -504,10 +504,10 @@ def exploratory02():
     input_filepath = input_path / f'time_series.parquet'
     df = pl.read_parquet(input_filepath)
 
-    output_path = input_path / 'model01' / 'sarima01'
+    output_path = input_path / 'model01' / 'differencing01'
     output_path.mkdir(exist_ok=True, parents=True)
 
-    md_filepath = output_path / 'sarima01.md'
+    md_filepath = output_path / 'differencing01.md'
     md = []
 
 
@@ -522,6 +522,84 @@ def exploratory02():
     # detrend_ts = ts - trend
     ts_train = ts[:test_start_idx]
 
+    ts_train_season_diff_1 = sarimax.diff(
+        ts_train, k_diff=0, k_seasonal_diff=1, seasonal_periods=6)
+    ts_train_season_diff_2 = sarimax.diff(
+        ts_train, k_diff=1, k_seasonal_diff=1, seasonal_periods=6)
+
+
+    md.append('# Looking at differencing')
+    md.append('\n')
+
+    output_filepath = output_path / 'time_series_season_diff.png'
+    plt.plot(ts_train, alpha=0.5, color='blue')
+    plt.plot(ts_train_season_diff_1, alpha=0.5, color='green')
+    plt.plot(ts_train_season_diff_2, alpha=0.5, color='orange')
+    plt.title('Time series and seasonal differencing')
+    plt.savefig(output_filepath)
+    plt.clf()
+    plt.close()
+
+    md.append(
+        'Time series (blue), with seasonal differencing only (green), and '
+        'with seasonal and regular differencing (orange)')
+    md.append('\n')
+    md.append(f'![Image]({output_filepath.name})')
+    md.append('\n')
+
+    output_filepath = output_path / 'time_series_season_diff_autocorr.png'
+    ts_series_by_row = [
+        ts_train, ts_train_season_diff_1, ts_train_season_diff_2]
+    plot_time_series_autocorrelation(ts_series_by_row, output_filepath)
+
+    md.append(
+        'Time series (Series #0), with seasonal differencing only '
+        '(Series #1), and with seasonal and regular differencing (Series #2)')
+    md.append('\n')
+    md.append(f'![Image]({output_filepath.name})')
+    md.append('\n')
+
+    md.append(
+        'Time series with seasonal differencing only (Series #1) shows best '
+        'autocorrelation profile')
+
+    order = (0, 0, 0)
+    season_period = df[0, 'season_period']
+    seasonal_order = (0, 0, 1, season_period)
+
+    # dir(sarimax.diff())
+    # sari = sarimax.SARIMAX(
+
+
+    write_list_to_text_file(md, md_filepath, True)
+
+
+def exploratory03():
+
+    input_path = Path.cwd() / 'output'
+    input_filepath = input_path / f'time_series.parquet'
+    df = pl.read_parquet(input_filepath)
+
+    output_path = input_path / 'model01' / 'differencing02'
+    output_path.mkdir(exist_ok=True, parents=True)
+
+    md_filepath = output_path / 'differencing02.md'
+    md = []
+
+
+    row_idx = 0
+    # trend = extract_trend_from_time_series_dataframe(df, row_idx)
+
+    train_len = int(df[row_idx, 'time_n'] * 0.6)
+    test_start_idx = train_len
+
+    ts_colnames = [e for e in df.columns if e[:3] == 'ts_']
+    ts = df[row_idx, ts_colnames].to_numpy().reshape(-1)
+    # detrend_ts = ts - trend
+    ts_train = ts[:test_start_idx]
+
+    ts_train_season_diff_0 = sarimax.diff(
+        ts_train, k_diff=1, k_seasonal_diff=0, seasonal_periods=6)
     ts_train_season_diff_1 = sarimax.diff(
         ts_train, k_diff=0, k_seasonal_diff=1, seasonal_periods=6)
     ts_train_season_diff_2 = sarimax.diff(
