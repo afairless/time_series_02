@@ -1,8 +1,11 @@
 #! /usr/bin/env python3
 
 import numpy as np
+from pandas.core.common import is_empty_slice
 import polars as pl
 from pathlib import Path
+from dataclasses import dataclass, field
+
 import matplotlib.pyplot as plt
 
 import statsmodels.tsa.stattools as tsa_tools
@@ -20,6 +23,94 @@ else:
         expand_values_by_lengths_into_vector,
         plot_time_series,
         )
+
+
+@dataclass
+class TimeSeriesDifferencing:
+
+    k_diff: int = 1
+    k_seasonal_diff: int = 0
+    seasonal_periods: int = 1
+    original_vector: np.ndarray = field(default_factory=lambda: np.array([]))
+    # simple_difference_vector: np.ndarray = field(
+    #     default_factory=lambda: np.array([]))
+    # seasonal_difference_vector: np.ndarray = field(
+    #     default_factory=lambda: np.array([]))
+
+
+    def difference_time_series(self, series: np.ndarray) -> np.ndarray:
+        """
+        Apply simple and/or seasonal differencing to given time series vector
+        """
+
+        # input series must be a 1-dimensional array
+        assert (np.array(series.shape) > 1).sum() <= 1
+
+        assert (self.k_diff + self.k_seasonal_diff) <= len(series)
+        if self.k_seasonal_diff > 0:
+            assert self.seasonal_periods >= 1
+
+        series = series.copy()
+        series = series.reshape(-1)
+        self.original_vector = series
+
+        # seasonal differencing
+        for _ in range(self.k_seasonal_diff):
+            series = (
+                series[self.seasonal_periods:] - 
+                series[:-self.seasonal_periods])
+
+        # simple/ordinary differencing
+        series = np.diff(series, self.k_diff, axis=0)
+
+        return series
+
+
+    def de_difference_time_series(
+        self, series: np.ndarray=np.array([])) -> np.ndarray:
+        """
+        "De-difference" given time series vector, i.e., back-transform the 
+            series so that the "forward" differencing procedure is reversed
+        """
+
+        if self.original_vector.size == 0:
+            raise ValueError(
+                'Original time series vector has not been provided; '
+                'run method "difference_time_series" on the vector first')
+
+        # input series must be a 1-dimensional array
+        assert (np.array(series.shape) > 1).sum() <= 1
+        # if (np.array(series.shape) > 1).sum() > 1:
+        #     raise ValueError('Input series must be a 1-dimensional array')
+
+        if series.size == 0:
+            return self.original_vector
+
+        if self.k_diff == 0 and self.k_seasonal_diff == 0:
+            return series
+
+        series = series.copy()
+        series = series.reshape(-1)
+        original_vector = self.original_vector.copy()
+        original_vector = original_vector.reshape(-1)
+
+        season_period_diff_len = self.k_seasonal_diff * self.seasonal_periods
+        diff_total = self.k_diff + season_period_diff_len 
+        assert (len(series) + diff_total) == len(original_vector)
+
+        # there's probably an elegant recursive algorithm for this
+        diff_vector = np.diff(original_vector, self.k_diff, axis=0)
+        combined_vector = np.sum([series, diff_vector], axis=0)
+
+        for k in range(self.k_diff, 0, -1):
+
+            diff_vector = np.diff(original_vector, k-1, axis=0)
+            prepend = np.array([diff_vector[0]])
+            prepend_vector = np.concatenate([prepend, combined_vector])
+
+            combined_vector = np.cumsum(prepend_vector)
+
+        return combined_vector  
 
 
 def write_list_to_text_file(
@@ -332,15 +423,6 @@ def plot_time_series_autocorrelation(
 
 def exploratory01():
 
-    # metrics:  RMSE, MAE, RMdSE, MdAE, 
-    #   plus those 4 relative to benchmark (probably naive and seasonal naive) 
-    #   maybe also relative to in-sample, i.e., scaled errors
-
-    # sklearn
-    # statsmodels
-    # skforecast
-    # pmdarima
-
     input_path = Path.cwd() / 'output'
     input_filepath = input_path / f'time_series.parquet'
     df = pl.read_parquet(input_filepath)
@@ -353,12 +435,6 @@ def exploratory01():
     md.append('# Classical ARIMA-style analysis/modeling')
     md.append('\n')
 
-    # df.columns
-
-    # for e in df.columns:
-    #     if 'constant' not in e and e[:3] != 'ts_':
-    #         print(e)
-
 
     row_idx = 0
     trend = extract_trend_from_time_series_dataframe(df, row_idx)
@@ -367,7 +443,6 @@ def exploratory01():
     test_start_idx = train_len
 
     ts_colnames = [e for e in df.columns if e[:3] == 'ts_']
-    arma_colnames = [e for e in df.columns if 'lag_polynomial_coefficients' in e]
 
 
     # plot full time series
@@ -512,14 +587,12 @@ def exploratory02():
 
 
     row_idx = 0
-    # trend = extract_trend_from_time_series_dataframe(df, row_idx)
 
     train_len = int(df[row_idx, 'time_n'] * 0.6)
     test_start_idx = train_len
 
     ts_colnames = [e for e in df.columns if e[:3] == 'ts_']
     ts = df[row_idx, ts_colnames].to_numpy().reshape(-1)
-    # detrend_ts = ts - trend
     ts_train = ts[:test_start_idx]
 
     ts_train_season_diff_1 = sarimax.diff(
@@ -542,7 +615,7 @@ def exploratory02():
 
     md.append(
         'Time series (blue), with seasonal differencing only (green), and '
-        'with seasonal and regular differencing (orange)')
+        'with seasonal and simple differencing (orange)')
     md.append('\n')
     md.append(f'![Image]({output_filepath.name})')
     md.append('\n')
@@ -554,7 +627,7 @@ def exploratory02():
 
     md.append(
         'Time series (Series #0), with seasonal differencing only '
-        '(Series #1), and with seasonal and regular differencing (Series #2)')
+        '(Series #1), and with seasonal and simple differencing (Series #2)')
     md.append('\n')
     md.append(f'![Image]({output_filepath.name})')
     md.append('\n')
@@ -580,14 +653,12 @@ def exploratory03():
 
 
     row_idx = 0
-    # trend = extract_trend_from_time_series_dataframe(df, row_idx)
 
     train_len = int(df[row_idx, 'time_n'] * 0.6)
     test_start_idx = train_len
 
     ts_colnames = [e for e in df.columns if e[:3] == 'ts_']
     ts = df[row_idx, ts_colnames].to_numpy().reshape(-1)
-    # detrend_ts = ts - trend
     ts_train = ts[:test_start_idx]
 
     ts_train_season_diff_0 = sarimax.diff(
@@ -630,7 +701,7 @@ def exploratory03():
 
     md.append(
         'The seasonal differencing only (Series #1) does better than the '
-        'simple/regular differencing')
+        'simple differencing')
     md.append('\n')
 
     md.append(
@@ -670,14 +741,12 @@ def exploratory04():
 
 
     row_idx = 0
-    # trend = extract_trend_from_time_series_dataframe(df, row_idx)
 
     train_len = int(df[row_idx, 'time_n'] * 0.6)
     test_start_idx = train_len
 
     ts_colnames = [e for e in df.columns if e[:3] == 'ts_']
     ts = df[row_idx, ts_colnames].to_numpy().reshape(-1)
-    # detrend_ts = ts - trend
     ts_train = ts[:test_start_idx]
 
     ts_train_season_diff = sarimax.diff(
@@ -761,18 +830,17 @@ def exploratory05():
 
 
     row_idx = 0
-    # trend = extract_trend_from_time_series_dataframe(df, row_idx)
 
     train_len = int(df[row_idx, 'time_n'] * 0.6)
     test_start_idx = train_len
 
     ts_colnames = [e for e in df.columns if e[:3] == 'ts_']
     ts = df[row_idx, ts_colnames].to_numpy().reshape(-1)
-    # detrend_ts = ts - trend
     ts_train = ts[:test_start_idx]
 
     ts_train_season_diff = sarimax.diff(
         ts_train, k_diff=0, k_seasonal_diff=1, seasonal_periods=6)
+
 
     # model 1
     ##################################################
@@ -860,6 +928,13 @@ def main():
     input_filepath = input_path / f'time_series.parquet'
     df = pl.read_parquet(input_filepath)
 
+    # df.columns
+    # arma_colnames = [e for e in df.columns if 'lag_polynomial_coefficients' in e]
+
+    # for e in df.columns:
+    #     if 'constant' not in e and e[:3] != 'ts_':
+    #         print(e)
+
     output_path = input_path / 'model01' / 'sarima02'
     output_path.mkdir(exist_ok=True, parents=True)
 
@@ -875,14 +950,65 @@ def main():
     ts_colnames = [e for e in df.columns if e[:3] == 'ts_']
     ts = df[row_idx, ts_colnames].to_numpy().reshape(-1)
     # detrend_ts = ts - trend
-    ts_train = ts[:test_start_idx]
 
+    ts_train = ts[:test_start_idx]
+    ts_test = ts[test_start_idx:]
     ts_train_season_diff = sarimax.diff(
         ts_train, k_diff=0, k_seasonal_diff=1, seasonal_periods=6)
 
 
+    # model 2
+    ##################################################
+    # p, d, q = 0, 0, 1 
+    order = (0, 0, 1)
+    season_period = df[0, 'season_period']
+    assert season_period == 6
+    # seasonal, AR = 1, D = 1, MA = 0
+    seasonal_order = (1, 1, 0, season_period)
+
+    model_2 = sarimax.SARIMAX(
+        ts_train_season_diff, order=order, seasonal_order=seasonal_order).fit()
+    fittedvalues_2 = model_2.fittedvalues
+    assert isinstance(fittedvalues_2, np.ndarray)
+
+    dir(model_2)
+    model_2._params_ar
+    model_2._params_ma
+    model_2._params_seasonal_ar
+    model_2._params_seasonal_ma
+    model_2.mse
+    model_2.llf
+    model_2.maroots
+    model_2.seasonalarparams
+    model_2.fixed_params
+    model_2.get_smoothed_decomposition()
+    ts_pred = model_2.forecast(steps=len(ts_test))
+
+    output_filepath = output_path / 'time_series_predictions.png'
+    plt.plot(ts_train_season_diff, alpha=0.5, color='blue')
+    plt.plot(ts_test, alpha=0.5, color='green')
+    plt.plot(ts_pred, alpha=0.5, color='orange')
+    plt.title('Time series')
+    plt.tight_layout()
+    plt.show()
+
+    plt.savefig(output_filepath)
+    plt.clf()
+    plt.close()
+
+
 
 if __name__ == '__main__':
+
+    # metrics:  RMSE, MAE, RMdSE, MdAE, 
+    #   plus those 4 relative to benchmark (probably naive and seasonal naive) 
+    #   maybe also relative to in-sample, i.e., scaled errors
+
+    # sklearn
+    # statsmodels
+    # skforecast
+    # pmdarima
+
     exploratory01()
     exploratory02()
     exploratory03()
