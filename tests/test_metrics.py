@@ -220,6 +220,190 @@ def test_statsmodels_sarimax_differencing_03(
     assert len(ts_diff_0) == len(time_series) - (period+1)
 
 
+def test_difference_time_series_seasonal_01():
+    """
+    Test seasonal differencing only
+    """
+
+    k_seasonal_diff = 0
+    seasonal_periods = 2
+    time_series = np.array([1, 2, 7, 9, 5, 6, 3, 4])
+
+    ts_diff = TimeSeriesDifferencing()
+    result = ts_diff.difference_time_series_seasonal(
+        time_series, k_seasonal_diff, seasonal_periods)
+
+    correct_result = time_series
+
+    np.testing.assert_almost_equal(result, correct_result)
+
+
+def test_difference_time_series_seasonal_02():
+    """
+    Test seasonal differencing only
+    """
+
+    k_seasonal_diff = 1
+    seasonal_periods = 2
+    time_series = np.array([1, 2, 7, 9, 5, 6, 3, 4])
+
+    ts_diff = TimeSeriesDifferencing()
+    result = ts_diff.difference_time_series_seasonal(
+        time_series, k_seasonal_diff, seasonal_periods)
+
+    correct_result = np.array([6, 7, -2, -3, -2, -2])
+
+    np.testing.assert_almost_equal(result, correct_result)
+
+
+def test_difference_time_series_seasonal_03():
+    """
+    Test seasonal differencing only
+    """
+
+    k_seasonal_diff = 2
+    seasonal_periods = 2
+    time_series = np.array([1, 2, 7, 9, 5, 6, 3, 4])
+
+    ts_diff = TimeSeriesDifferencing()
+    result = ts_diff.difference_time_series_seasonal(
+        time_series, k_seasonal_diff, seasonal_periods)
+
+    correct_result = np.array([-8, -10, 0, 1])
+
+    np.testing.assert_almost_equal(result, correct_result)
+
+
+def test_difference_time_series_seasonal_04():
+    """
+    Test seasonal differencing only
+    """
+
+    k_seasonal_diff = 3
+    seasonal_periods = 2
+    time_series = np.array([1, 2, 7, 9, 5, 6, 3, 4])
+
+    ts_diff = TimeSeriesDifferencing()
+    result = ts_diff.difference_time_series_seasonal(
+        time_series, k_seasonal_diff, seasonal_periods)
+
+    correct_result = np.array([8, 11])
+
+    np.testing.assert_almost_equal(result, correct_result)
+
+
+def test_difference_time_series_seasonal_05():
+    """
+    Test seasonal differencing only
+    k_seasonal_diff * seasonal_periods uses all of input array
+    """
+
+    k_seasonal_diff = 4
+    seasonal_periods = 2
+    time_series = np.array([1, 2, 7, 9, 5, 6, 3, 4])
+
+    ts_diff = TimeSeriesDifferencing()
+    result = ts_diff.difference_time_series_seasonal(
+        time_series, k_seasonal_diff, seasonal_periods)
+
+    correct_result = np.array([])
+
+    np.testing.assert_almost_equal(result, correct_result)
+
+
+def test_difference_time_series_seasonal_06():
+    """
+    Test seasonal differencing only
+    k_seasonal_diff * seasonal_periods exceeds length of input array
+    """
+
+    k_seasonal_diff = 5
+    seasonal_periods = 2
+    time_series = np.array([1, 2, 7, 9, 5, 6, 3, 4])
+
+    ts_diff = TimeSeriesDifferencing()
+    result = ts_diff.difference_time_series_seasonal(
+        time_series, k_seasonal_diff, seasonal_periods)
+
+    correct_result = np.array([])
+
+    np.testing.assert_almost_equal(result, correct_result)
+
+
+def test_difference_time_series_seasonal_07():
+    """
+    Test seasonal differencing only
+    """
+
+    k_seasonal_diff = 1
+    seasonal_periods = 3
+    time_series = np.array([3, 5, 1, 8, 2, 0, 7, 9, 4])
+
+    ts_diff = TimeSeriesDifferencing()
+    result = ts_diff.difference_time_series_seasonal(
+        time_series, k_seasonal_diff, seasonal_periods)
+
+    correct_result = np.array([5, -3, -1, -1, 7, 4])
+
+    np.testing.assert_almost_equal(result, correct_result)
+
+
+def test_difference_time_series_seasonal_08():
+    """
+    Test seasonal differencing only
+    """
+
+    k_seasonal_diff = 2
+    seasonal_periods = 3
+    time_series = np.array([3, 5, 1, 8, 2, 0, 7, 9, 4])
+
+    ts_diff = TimeSeriesDifferencing()
+    result = ts_diff.difference_time_series_seasonal(
+        time_series, k_seasonal_diff, seasonal_periods)
+
+    correct_result = np.array([-6, 10, 5])
+
+    np.testing.assert_almost_equal(result, correct_result)
+
+
+def test_difference_time_series_seasonal_09():
+    """
+    Test seasonal differencing only
+    k_seasonal_diff * seasonal_periods uses all of input array
+    """
+
+    k_seasonal_diff = 3
+    seasonal_periods = 3
+    time_series = np.array([3, 5, 1, 8, 2, 0, 7, 9, 4])
+
+    ts_diff = TimeSeriesDifferencing()
+    result = ts_diff.difference_time_series_seasonal(
+        time_series, k_seasonal_diff, seasonal_periods)
+
+    correct_result = np.array([])
+
+    np.testing.assert_almost_equal(result, correct_result)
+
+
+def test_difference_time_series_seasonal_10():
+    """
+    Test seasonal differencing only
+    k_seasonal_diff * seasonal_periods exceeds length of input array
+    """
+
+    k_seasonal_diff = 4
+    seasonal_periods = 3
+    time_series = np.array([3, 5, 1, 8, 2, 0, 7, 9, 4])
+
+    ts_diff = TimeSeriesDifferencing()
+    result = ts_diff.difference_time_series_seasonal(
+        time_series, k_seasonal_diff, seasonal_periods)
+
+    correct_result = np.array([])
+
+    np.testing.assert_almost_equal(result, correct_result)
+
+
 def test_difference_time_series_01():
     """
     Test invalid input:  array with >1 dimension
@@ -524,6 +708,104 @@ def test_de_difference_time_series_10(
     ts_diff_1 = ts_diff.de_difference_time_series(ts_diff_0)
 
     np.testing.assert_almost_equal(time_series, ts_diff_1, decimal=3)
+
+
+def test_de_difference_time_series_11():
+    """
+    Test seasonal differencing only:  
+        k_seasonal_diff = 1
+        empty de-differencing input vector
+        seasonal_periods = 2
+    """
+
+    k_diff = 0
+    k_seasonal_diff = 1
+    seasonal_periods = 2
+    time_series_1 = np.array([1, 2, 7, 9, 5, 6, 3, 4])
+
+    ts_diff = TimeSeriesDifferencing(
+        k_diff=k_diff, k_seasonal_diff=k_seasonal_diff, 
+        seasonal_periods=seasonal_periods)
+    _ = ts_diff.difference_time_series(time_series_1)
+
+    ts_diff_2 = ts_diff.de_difference_time_series()
+    np.testing.assert_almost_equal(time_series_1, ts_diff_2)
+
+
+def test_de_difference_time_series_12():
+    """
+    Test seasonal differencing only:  
+        k_seasonal_diff = 1
+        empty de-differencing input vector
+        seasonal_periods = 2
+    """
+
+    k_diff = 0
+    k_seasonal_diff = 1
+    seasonal_periods = 2
+    time_series_1 = np.array([1, 2, 7, 9, 5, 6, 3, 4])
+
+    ts_diff = TimeSeriesDifferencing(
+        k_diff=k_diff, k_seasonal_diff=k_seasonal_diff, 
+        seasonal_periods=seasonal_periods)
+    _ = ts_diff.difference_time_series(time_series_1)
+
+    time_series_2 = np.array([])
+
+    ts_diff_2 = ts_diff.de_difference_time_series(time_series_2)
+    np.testing.assert_almost_equal(time_series_1, ts_diff_2)
+
+
+@pytest.mark.skip(reason="Not implemented yet")
+def test_de_difference_time_series_13():
+    """
+    Test seasonal differencing only:  
+        k_seasonal_diff = 1
+        seasonal_periods = 2
+    """
+
+    k_diff = 0
+    k_seasonal_diff = 1
+    seasonal_periods = 2
+    time_series_1 = np.array([1, 2, 7, 9, 5, 6, 3, 4])
+
+    ts_diff = TimeSeriesDifferencing(
+        k_diff=k_diff, k_seasonal_diff=k_seasonal_diff, 
+        seasonal_periods=seasonal_periods)
+    _ = ts_diff.difference_time_series(time_series_1)
+
+    time_series_2 = np.array([1, 1, 1, 1, 1, 1])
+    result = ts_diff.de_difference_time_series(time_series_2)
+
+    correct_result = np.array([1, 8, 16, 15, 13, 12, 11])
+
+    np.testing.assert_almost_equal(result, correct_result)
+
+
+@pytest.mark.skip(reason="Not implemented yet")
+def test_de_difference_time_series_14():
+    """
+    Test seasonal differencing only:  
+        k_seasonal_diff = 2
+        seasonal_periods = 3
+    """
+
+    k_diff = 0
+    k_seasonal_diff = 2
+    seasonal_periods = 3
+    time_series_1 = np.array([1, 2, 7, 9, 5, 6, 3, 4, 0])
+
+    ts_diff = TimeSeriesDifferencing(
+        k_diff=k_diff, k_seasonal_diff=k_seasonal_diff, 
+        seasonal_periods=seasonal_periods)
+    _ = ts_diff.difference_time_series(time_series_1)
+
+    time_series_2 = np.array([4, 3, 2])
+    result = ts_diff.de_difference_time_series(time_series_2)
+
+    correct_result = np.array([1, 2, 7, 9, 5, 6, 7, 7, 2])
+
+    np.testing.assert_almost_equal(result, correct_result)
 
 
 '''

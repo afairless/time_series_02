@@ -39,6 +39,21 @@ class TimeSeriesDifferencing:
     #     default_factory=lambda: np.array([]))
 
 
+    def difference_time_series_seasonal(
+        self, series: np.ndarray, k_seasonal_diff: int, seasonal_periods: int
+        ) -> np.ndarray:
+        """
+        Apply seasonal differencing to given time series vector
+        """
+
+        for _ in range(k_seasonal_diff):
+            series = (
+                series[seasonal_periods:] - 
+                series[:-seasonal_periods])
+
+        return series
+
+
     def difference_time_series(self, series: np.ndarray) -> np.ndarray:
         """
         Apply simple and/or seasonal differencing to given time series vector
@@ -56,10 +71,8 @@ class TimeSeriesDifferencing:
         self.original_vector = series
 
         # seasonal differencing
-        for _ in range(self.k_seasonal_diff):
-            series = (
-                series[self.seasonal_periods:] - 
-                series[:-self.seasonal_periods])
+        series = self.difference_time_series_seasonal(
+            series, self.k_seasonal_diff, self.seasonal_periods)
 
         # simple/ordinary differencing
         series = np.diff(series, self.k_diff, axis=0)
@@ -74,6 +87,9 @@ class TimeSeriesDifferencing:
         "De-difference" given time series vector, i.e., back-transform the 
             series so that the "forward" differencing procedure is reversed
         """
+
+        # INPUT PRE-CHECKS
+        ##################################################
 
         if self.original_vector.size == 0:
             raise ValueError(
@@ -100,17 +116,44 @@ class TimeSeriesDifferencing:
         diff_total = self.k_diff + season_period_diff_len 
         assert (len(series) + diff_total) == len(original_vector)
 
-        # there's probably an elegant recursive algorithm for this
-        diff_vector = np.diff(original_vector, self.k_diff, axis=0)
-        if np.allclose(self.difference_vector, series):
-            combined_vector = diff_vector 
-        else:
-            combined_vector = np.sum([series, diff_vector], axis=0)
 
+        # DE-DIFFERENCE TIME SERIES
+        ##################################################
+        # there's probably an elegant recursive algorithm for this
+        ##################################################
+
+        # apply simple and seasonal differencing to original vector to get 
+        #   original difference vector
+        diff_vector_seasonal = self.difference_time_series_seasonal(
+            original_vector, self.k_seasonal_diff, self.seasonal_periods)
+        diff_vector_0 = np.diff(diff_vector_seasonal, self.k_diff, axis=0)
+
+        # if the given series is the original difference vector, pass original
+        #   difference vector along as the combined vector
+        if np.allclose(self.difference_vector, series):
+            combined_vector = diff_vector_0 
+        # otherwise, sum the given vector with the original difference vector, 
+        #   i.e., the given vector modifies the original differences
+        else:
+            combined_vector = np.sum([series, diff_vector_0], axis=0)
+
+        # simple de-differencing
         for k in range(self.k_diff, 0, -1):
 
             diff_vector = np.diff(original_vector, k-1, axis=0)
             prepend = np.array([diff_vector[0]])
+            prepend_vector = np.concatenate([prepend, combined_vector])
+
+            combined_vector = np.cumsum(prepend_vector)
+
+        # seasonal de-differencing
+        for k in range(self.k_seasonal_diff, 0, -1):
+
+            diff_vector = self.difference_time_series_seasonal(
+                original_vector, k_seasonal_diff=k-1, 
+                seasonal_periods=self.seasonal_periods)
+            prepend = np.array(
+                [diff_vector[:self.seasonal_periods]]).reshape(-1)
             prepend_vector = np.concatenate([prepend, combined_vector])
 
             combined_vector = np.cumsum(prepend_vector)
