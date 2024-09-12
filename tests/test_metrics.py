@@ -489,7 +489,20 @@ def test_de_difference_time_series_08():
     np.testing.assert_almost_equal(result, correct_result)
 
 
-'''
+def test_de_difference_time_series_09():
+    """
+    Test simple differencing only:  invert differencing, k_diff = 1
+    """
+
+    time_series = np.array([2, 1, 3, 5])
+
+    ts_diff = TimeSeriesDifferencing(k_diff=1)
+    ts_diff_0 = ts_diff.difference_time_series(time_series)
+    ts_diff_1 = ts_diff.de_difference_time_series(ts_diff_0)
+
+    np.testing.assert_almost_equal(time_series, ts_diff_1)
+
+
 @given(
     low=st.integers(min_value=-1000, max_value=1000),
     high=st.integers(min_value=-1000, max_value=1000),
@@ -497,52 +510,48 @@ def test_de_difference_time_series_08():
     seed=st.integers(min_value=1, max_value=1_000_000),
     k_diff=st.integers(min_value=1, max_value=4))
 @settings(print_blob=True)
-def test_de_difference_time_series_90(
-    low_1: int, high_1: int, arr_len_1: int, seed_1: int, 
-    k_diff: int):
+def test_de_difference_time_series_10(
+    low: int, high: int, arr_len: int, seed: int, k_diff: int):
     """
-    Test simple differencing only
+    Test simple differencing only:  invert differencing
     """
 
-    rng = np.random.default_rng(seed_1)
-    time_series_1 = low_1 + (high_1 - low_1) * rng.random(arr_len_1)
-
-    ts_diff_0 = sarimax.diff(time_series_1, k_diff=k_diff)
+    rng = np.random.default_rng(seed)
+    time_series = low + (high - low) * rng.random(arr_len)
 
     ts_diff = TimeSeriesDifferencing(k_diff=k_diff)
-    ts_diff_1 = ts_diff.difference_time_series(time_series_1)
+    ts_diff_0 = ts_diff.difference_time_series(time_series)
+    ts_diff_1 = ts_diff.de_difference_time_series(ts_diff_0)
 
-    np.testing.assert_almost_equal(ts_diff_0, ts_diff_1)
-    assert len(ts_diff_0) == len(time_series_1) - k_diff
-
-    ts_diff_2 = ts_diff.de_difference_time_series(time_series_1)
-    np.testing.assert_almost_equal(time_series_1, ts_diff_2)
+    np.testing.assert_almost_equal(time_series, ts_diff_1, decimal=3)
 
 
-def test_difference_time_series_99():
+'''
+def test_de_difference_time_series_09():
     """
-    Test simple differencing
+    Test simple differencing only:  
     """
 
-    # rng = np.random.default_rng(seed)
-    # time_series = low + (high - low) * rng.random(arr_len)
-    time_series = np.array([1, 2, 3, 4, 5, 6])
-    time_series = np.array([1, 2, 4, 7, 2, 5])
-    time_series = np.array([9, 2, 4, 7, 2, 5])
+    n = 8
+    time_series_list = [np.zeros(n), np.ones(n), np.ones(n) + np.ones(n)]
 
-    ts_diff_0 = sarimax.diff(time_series, k_diff=1)
+    for k_diff in range(1, 4):
+        for ts1 in time_series_list:
+            for ts2 in time_series_list:
 
-    ts_diff = TimeSeriesDifferencing(k_diff=1)
-    ts_diff_1 = ts_diff.difference_time_series(time_series)
+                ts_diff = TimeSeriesDifferencing(k_diff=k_diff)
+                fdiff = ts_diff.difference_time_series(ts1)
+                rdiff = ts_diff.de_difference_time_series(ts2[:-k_diff])
 
-    np.testing.assert_almost_equal(ts_diff_0, ts_diff_1)
-    assert len(ts_diff_0) == len(time_series) - 1
+                print('k_diff\t', k_diff)
+                print('ts1\t', ts1)
+                print('ts2\t', ts2)
+                print('fdiff\t', fdiff)
+                print('rdiff\t', rdiff)
+                print('ts1d1\t', np.diff(ts1, 1, axis=0))
+                print('rdfd1\t', np.diff(rdiff, 1, axis=0))
 
-    ts_diff_2 = ts_diff.de_difference_time_series(ts_diff_1)
-
-    # test that de-differenced series is linear transformation of 'time_series'
-    slope_diffs = np.std(time_series - ts_diff_2)
-    np.testing.assert_almost_equal(slope_diffs, 0)
+    breakpoint()
 '''
 
 

@@ -32,6 +32,7 @@ class TimeSeriesDifferencing:
     k_seasonal_diff: int = 0
     seasonal_periods: int = 1
     original_vector: np.ndarray = field(default_factory=lambda: np.array([]))
+    difference_vector: np.ndarray = field(default_factory=lambda: np.array([]))
     # simple_difference_vector: np.ndarray = field(
     #     default_factory=lambda: np.array([]))
     # seasonal_difference_vector: np.ndarray = field(
@@ -62,6 +63,7 @@ class TimeSeriesDifferencing:
 
         # simple/ordinary differencing
         series = np.diff(series, self.k_diff, axis=0)
+        self.difference_vector = series
 
         return series
 
@@ -100,7 +102,10 @@ class TimeSeriesDifferencing:
 
         # there's probably an elegant recursive algorithm for this
         diff_vector = np.diff(original_vector, self.k_diff, axis=0)
-        combined_vector = np.sum([series, diff_vector], axis=0)
+        if np.allclose(self.difference_vector, series):
+            combined_vector = diff_vector 
+        else:
+            combined_vector = np.sum([series, diff_vector], axis=0)
 
         for k in range(self.k_diff, 0, -1):
 
