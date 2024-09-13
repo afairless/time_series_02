@@ -33,10 +33,6 @@ class TimeSeriesDifferencing:
     seasonal_periods: int = 1
     original_vector: np.ndarray = field(default_factory=lambda: np.array([]))
     difference_vector: np.ndarray = field(default_factory=lambda: np.array([]))
-    # simple_difference_vector: np.ndarray = field(
-    #     default_factory=lambda: np.array([]))
-    # seasonal_difference_vector: np.ndarray = field(
-    #     default_factory=lambda: np.array([]))
 
 
     def difference_time_series_seasonal(
@@ -79,6 +75,27 @@ class TimeSeriesDifferencing:
         self.difference_vector = series
 
         return series
+
+
+    def periodic_cumulative_sum(
+        self, series: np.ndarray, seasonal_periods: int) -> np.ndarray:
+        """
+        Calculate cumulative sums in a 1-dimensional array 'series' by position 
+            in a period specified by 'seasonal_periods'
+        """
+
+        # input series must be a 1-dimensional array
+        assert (np.array(series.shape) > 1).sum() <= 1
+
+        assert len(series) > seasonal_periods
+        assert len(series) % seasonal_periods == 0
+
+        cum_sums_by_period = [
+            np.cumsum(series[i::seasonal_periods]) 
+            for i in range(seasonal_periods)]
+        periodically_cumulated_array = np.vstack(cum_sums_by_period).flatten('F')
+
+        return periodically_cumulated_array 
 
 
     def de_difference_time_series(

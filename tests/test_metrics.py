@@ -531,6 +531,80 @@ def test_difference_time_series_05(
     assert len(ts_diff_0) == max(0, (len(time_series) - diff_total))
 
 
+def test_periodic_cumulative_sum_01():
+    """
+    Test invalid input:  empty input array
+    """
+
+    seasonal_periods = 2
+    series = np.array([])
+
+    ts_diff = TimeSeriesDifferencing()
+
+    with pytest.raises(AssertionError):
+        _ = ts_diff.periodic_cumulative_sum(series, seasonal_periods)
+
+
+def test_periodic_cumulative_sum_02():
+    """
+    Test invalid input:  array with >1 dimension
+    """
+
+    seasonal_periods = 2
+    series = np.array([[1, 2], [3, 4]])
+
+    ts_diff = TimeSeriesDifferencing()
+
+    with pytest.raises(AssertionError):
+        _ = ts_diff.periodic_cumulative_sum(series, seasonal_periods)
+
+
+def test_periodic_cumulative_sum_03():
+    """
+    Test invalid input:  array with length that is not a multiple of the period
+    """
+
+    seasonal_periods = 2
+    series = np.array([1, 2, 3, 4, 5])
+
+    ts_diff = TimeSeriesDifferencing()
+
+    with pytest.raises(AssertionError):
+        _ = ts_diff.periodic_cumulative_sum(series, seasonal_periods)
+
+
+def test_periodic_cumulative_sum_04():
+    """
+    Test valid input
+    """
+
+    seasonal_periods = 3
+    series = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9])
+
+    ts_diff = TimeSeriesDifferencing()
+    result = ts_diff.periodic_cumulative_sum(series, seasonal_periods)
+
+    correct_result = np.array([1, 2, 3, 5, 7, 9, 12, 15, 18])
+
+    np.testing.assert_almost_equal(correct_result, result)
+
+
+def test_periodic_cumulative_sum_05():
+    """
+    Test valid input
+    """
+
+    seasonal_periods = 2
+    series = np.array([1, 2, 7, 8, -1, -2, -1, -1])
+
+    ts_diff = TimeSeriesDifferencing()
+    result = ts_diff.periodic_cumulative_sum(series, seasonal_periods)
+
+    correct_result = np.array([1, 2, 8, 10, 7, 8, 6, 7])
+
+    np.testing.assert_almost_equal(correct_result, result)
+
+
 def test_de_difference_time_series_01():
     """
     Test invalid input:  no differencing before de-differencing
@@ -777,7 +851,7 @@ def test_de_difference_time_series_13():
     time_series_2 = np.array([1, 1, 1, 1, 1, 1])
     result = ts_diff.de_difference_time_series(time_series_2)
 
-    correct_result = np.array([1, 8, 16, 15, 13, 12, 11])
+    correct_result = np.array([1, 2, 8, 10, 7, 8, 6, 7])
 
     np.testing.assert_almost_equal(result, correct_result)
 
