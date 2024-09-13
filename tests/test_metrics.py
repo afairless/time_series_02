@@ -880,6 +880,35 @@ def test_de_difference_time_series_14():
     np.testing.assert_almost_equal(result, correct_result)
 
 
+@given(
+    k_seasonal_diff=st.integers(min_value=1, max_value=4),
+    seasonal_periods=st.integers(min_value=1, max_value=12),
+    arr_len_factor=st.integers(min_value=1, max_value=20),
+    low=st.integers(min_value=-1000, max_value=1000),
+    high=st.integers(min_value=-1000, max_value=1000),
+    seed=st.integers(min_value=1, max_value=1_000_000))
+@settings(print_blob=True)
+def test_de_difference_time_series_15(
+    k_seasonal_diff: int, seasonal_periods: int, arr_len_factor: int, low: int, 
+    high: int, seed: int):
+    """
+    Test seasonal differencing only:  invert differencing
+    """
+
+    k_diff = 0
+    arr_len = k_seasonal_diff * seasonal_periods * arr_len_factor
+    rng = np.random.default_rng(seed)
+    time_series = low + (high - low) * rng.random(arr_len)
+
+    ts_diff = TimeSeriesDifferencing(
+        k_diff=k_diff, k_seasonal_diff=k_seasonal_diff, 
+        seasonal_periods=seasonal_periods)
+    ts_diff_0 = ts_diff.difference_time_series(time_series)
+    ts_diff_1 = ts_diff.de_difference_time_series(ts_diff_0)
+
+    np.testing.assert_almost_equal(time_series, ts_diff_1, decimal=3)
+
+
 '''
 def test_de_difference_time_series_09():
     """
