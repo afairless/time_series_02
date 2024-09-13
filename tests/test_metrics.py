@@ -830,7 +830,6 @@ def test_de_difference_time_series_12():
     np.testing.assert_almost_equal(time_series_1, ts_diff_2)
 
 
-@pytest.mark.skip(reason="Not implemented yet")
 def test_de_difference_time_series_13():
     """
     Test seasonal differencing only:  
@@ -856,7 +855,6 @@ def test_de_difference_time_series_13():
     np.testing.assert_almost_equal(result, correct_result)
 
 
-@pytest.mark.skip(reason="Not implemented yet")
 def test_de_difference_time_series_14():
     """
     Test seasonal differencing only:  

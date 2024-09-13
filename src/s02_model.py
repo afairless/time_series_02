@@ -173,7 +173,8 @@ class TimeSeriesDifferencing:
                 [diff_vector[:self.seasonal_periods]]).reshape(-1)
             prepend_vector = np.concatenate([prepend, combined_vector])
 
-            combined_vector = np.cumsum(prepend_vector)
+            combined_vector = self.periodic_cumulative_sum(
+                prepend_vector, self.seasonal_periods)
 
         return combined_vector  
 
