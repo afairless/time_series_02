@@ -33,8 +33,6 @@ class TimeSeriesDifferencing:
     seasonal_periods: int = 1
     original_vector: np.ndarray = field(
         default_factory=lambda: np.array([]))
-    seasonal_difference_vector: np.ndarray = field(
-        default_factory=lambda: np.array([]))
     final_difference_vector: np.ndarray = field(
         default_factory=lambda: np.array([]))
     prepend_vector: np.ndarray = field(
@@ -77,7 +75,6 @@ class TimeSeriesDifferencing:
         # seasonal differencing
         series = self.difference_time_series_seasonal(
             series, self.k_seasonal_diff, self.seasonal_periods)
-        self.seasonal_difference_vector = series
 
         # simple/ordinary differencing
         diff_vectors = [
@@ -117,7 +114,6 @@ class TimeSeriesDifferencing:
         # seasonal differencing
         series = self.difference_time_series_seasonal(
             series, self.k_seasonal_diff, self.seasonal_periods)
-        self.seasonal_difference_vector = series
 
         return series
 
@@ -127,10 +123,6 @@ class TimeSeriesDifferencing:
         """
         Calculate cumulative sums in a 1-dimensional array 'series' by position 
             in a period specified by 'seasonal_periods'
-        If the length of 'series' is not divisible by 'seasonal_periods', the 
-            function assumes that the 'extra', remainder elements are at the
-            beginning of the array and should be excluded from the cumulative
-            sum
         """
 
         # input series must be a 1-dimensional array
@@ -138,15 +130,12 @@ class TimeSeriesDifferencing:
 
         assert len(series) > seasonal_periods
 
-        remainder = len(series) % seasonal_periods
-        remainder_elements = series[:remainder]
-        cumsum_elements = series[remainder:]
-        cum_sums_by_period = [
-            np.cumsum(cumsum_elements[i::seasonal_periods]) 
-            for i in range(seasonal_periods)]
-        periodically_cumulated_array = np.vstack(cum_sums_by_period).flatten('F')
-        periodic_cumsum = np.concatenate(
-            [remainder_elements, periodically_cumulated_array])
+        periods_n = len(series) - seasonal_periods
+        periodic_cumsum = series[:seasonal_periods]
+        for idx_1 in range(periods_n):
+            idx_2 = idx_1 + seasonal_periods
+            period_sum = np.array([periodic_cumsum[idx_1] + series[idx_2]])
+            periodic_cumsum = np.concatenate([periodic_cumsum, period_sum])
 
         return periodic_cumsum  
 
@@ -195,6 +184,8 @@ class TimeSeriesDifferencing:
         # if the given series is the final difference vector, pass original
         #   difference vector along as the combined vector
         if np.allclose(self.final_difference_vector, series):
+            # could return 'original_vector' here for speed, but continuing
+            #   through rest of code provides an important debugging scenario
             combined_vector = series.copy()
         # otherwise, sum the given vector with the final difference vector, 
         #   i.e., the given vector modifies the original differences
@@ -224,91 +215,6 @@ class TimeSeriesDifferencing:
 
             # remove/"pop" used elements from 'prepend_vector'
             self.prepend_vector = self.prepend_vector[:-self.seasonal_periods]
-
-        return combined_vector  
-
-
-    def _de_difference_time_series_0(
-        self, series: np.ndarray=np.array([])) -> np.ndarray:
-        """
-        "De-difference" given time series vector, i.e., back-transform the 
-            series so that the "forward" differencing procedure is reversed
-        """
-
-        # INPUT PRE-CHECKS
-        ##################################################
-
-        if self.original_vector.size == 0:
-            raise ValueError(
-                'Original time series vector has not been provided; '
-                'run method "difference_time_series" on the vector first')
-
-        # input series must be a 1-dimensional array
-        assert (np.array(series.shape) > 1).sum() <= 1
-        # if (np.array(series.shape) > 1).sum() > 1:
-        #     raise ValueError('Input series must be a 1-dimensional array')
-
-        if series.size == 0:
-            return self.original_vector
-
-        if self.k_diff == 0 and self.k_seasonal_diff == 0:
-            return series
-
-        series = series.copy()
-        series = series.reshape(-1)
-        original_vector = self.original_vector.copy()
-        original_vector = original_vector.reshape(-1)
-
-        season_period_diff_len = self.k_seasonal_diff * self.seasonal_periods
-        diff_total = self.k_diff + season_period_diff_len 
-        assert (len(series) + diff_total) == len(original_vector)
-
-
-        # DE-DIFFERENCE TIME SERIES
-        ##################################################
-        # there's probably an elegant recursive algorithm for this
-        ##################################################
-
-        # apply simple and seasonal differencing to original vector to get 
-        #   original difference vector
-        diff_vector_seasonal = self.difference_time_series_seasonal(
-            original_vector, self.k_seasonal_diff, self.seasonal_periods)
-        diff_vector_0 = np.diff(diff_vector_seasonal, self.k_diff, axis=0)
-
-        # if the given series is the original difference vector, pass original
-        #   difference vector along as the combined vector
-        if np.allclose(self.final_difference_vector, series):
-            combined_vector = diff_vector_0 
-        # otherwise, sum the given vector with the original difference vector, 
-        #   i.e., the given vector modifies the original differences
-        else:
-            combined_vector = np.sum([series, diff_vector_0], axis=0)
-
-        # simple de-differencing
-        k_total = self.k_diff + self.k_seasonal_diff
-        for k in range(k_total, self.k_seasonal_diff, -1):
-
-            if self.k_seasonal_diff > 0:
-                diff_vector = self.seasonal_difference_vector
-            else:
-                diff_vector = np.diff(original_vector, k-1, axis=0)
-            prepend = np.array([diff_vector[0]])
-            prepend_vector = np.concatenate([prepend, combined_vector])
-
-            combined_vector = np.cumsum(prepend_vector)
-
-        # seasonal de-differencing
-        for k in range(self.k_seasonal_diff, 0, -1):
-
-            diff_vector = self.difference_time_series_seasonal(
-                original_vector, k_seasonal_diff=k-1, 
-                seasonal_periods=self.seasonal_periods)
-            prepend = np.array(
-                [diff_vector[:self.seasonal_periods]]).reshape(-1)
-            prepend_vector = np.concatenate([prepend, combined_vector])
-
-            combined_vector = self.periodic_cumulative_sum(
-                prepend_vector, self.seasonal_periods)
 
         return combined_vector  
 

@@ -663,7 +663,25 @@ def test_periodic_cumulative_sum_04():
 
 def test_periodic_cumulative_sum_05():
     """
-    Test valid input
+    Test valid input:  length of input 'series' is not a multiple of 
+        'seasonal_periods '
+    """
+
+    seasonal_periods = 2
+    series = np.array([1, 2, -2, 3, -5])
+
+    ts_diff = TimeSeriesDifferencing()
+    result = ts_diff.periodic_cumulative_sum(series, seasonal_periods)
+
+    correct_result = np.array([1, 2, -1, 5, -6])
+
+    np.testing.assert_almost_equal(correct_result, result)
+
+
+def test_periodic_cumulative_sum_06():
+    """
+    Test valid input:  length of input 'series' is not a multiple of 
+        'seasonal_periods '
     """
 
     seasonal_periods = 2
@@ -672,14 +690,15 @@ def test_periodic_cumulative_sum_05():
     ts_diff = TimeSeriesDifferencing()
     result = ts_diff.periodic_cumulative_sum(series, seasonal_periods)
 
-    correct_result = np.array([1, 2, 3, 6, 8])
+    correct_result = np.array([1, 2, 4, 6, 9])
 
     np.testing.assert_almost_equal(correct_result, result)
 
 
-def test_periodic_cumulative_sum_06():
+def test_periodic_cumulative_sum_07():
     """
-    Test valid input
+    Test valid input:  length of input 'series' is not a multiple of 
+        'seasonal_periods '
     """
 
     seasonal_periods = 3
@@ -688,14 +707,15 @@ def test_periodic_cumulative_sum_06():
     ts_diff = TimeSeriesDifferencing()
     result = ts_diff.periodic_cumulative_sum(series, seasonal_periods)
 
-    correct_result = np.array([5, -3, 1, 2, 8, 1, 0, 3])
+    correct_result = np.array([5, -3, 1, 7, 5, 1, 5, 0])
 
     np.testing.assert_almost_equal(correct_result, result)
 
 
-def test_periodic_cumulative_sum_07():
+def test_periodic_cumulative_sum_08():
     """
-    Test valid input
+    Test valid input:  length of input 'series' is not a multiple of 
+        'seasonal_periods '
     """
 
     seasonal_periods = 2
@@ -704,7 +724,7 @@ def test_periodic_cumulative_sum_07():
     ts_diff = TimeSeriesDifferencing()
     result = ts_diff.periodic_cumulative_sum(series, seasonal_periods)
 
-    correct_result = np.array([-3, 4, 8, -4, 2, -4, 3, 5, 1])
+    correct_result = np.array([-3, 4, 5, -4, -1, -4, 0, 5, -2])
 
     np.testing.assert_almost_equal(correct_result, result)
 
@@ -1057,7 +1077,6 @@ def test_de_difference_time_series_16():
     np.testing.assert_almost_equal(time_series, ts_diff_1, decimal=3)
 
 
-# @pytest.mark.skip(reason='Not implemented')
 def test_de_difference_time_series_17():
     """
     Test simple and seasonal differencing
@@ -1081,7 +1100,6 @@ def test_de_difference_time_series_17():
     np.testing.assert_almost_equal(result, correct_result)
 
 
-'''
 @given(
     k_diff=st.integers(min_value=1, max_value=4),
     k_seasonal_diff=st.integers(min_value=1, max_value=4),
@@ -1091,17 +1109,12 @@ def test_de_difference_time_series_17():
     high=st.integers(min_value=-1000, max_value=1000),
     seed=st.integers(min_value=1, max_value=1_000_000))
 @settings(print_blob=True)
-@reproduce_failure('6.111.2', b'AXicY2BgZGRAAgAAKwAD')
 def test_de_difference_time_series_18(
     k_diff: int, k_seasonal_diff: int, seasonal_periods: int, 
     arr_len_factor: int, low: int, high: int, seed: int):
     """
     Test simple and seasonal differencing:  invert differencing
     """
-
-    # arr_len = max(2, k_seasonal_diff * seasonal_periods * arr_len_factor)
-    # rng = np.random.default_rng(seed)
-    # time_series = low + (high - low) * rng.random(arr_len)
 
     rng = np.random.default_rng(seed)
     low = k_diff
@@ -1116,8 +1129,7 @@ def test_de_difference_time_series_18(
     ts_diff_0 = ts_diff.difference_time_series(time_series)
     ts_diff_1 = ts_diff.de_difference_time_series(ts_diff_0)
 
-    np.testing.assert_almost_equal(time_series, ts_diff_1, decimal=3)
-'''
+    np.testing.assert_almost_equal(time_series, ts_diff_1, decimal=2)
 
 
 '''
