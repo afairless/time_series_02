@@ -127,20 +127,28 @@ class TimeSeriesDifferencing:
         """
         Calculate cumulative sums in a 1-dimensional array 'series' by position 
             in a period specified by 'seasonal_periods'
+        If the length of 'series' is not divisible by 'seasonal_periods', the 
+            function assumes that the 'extra', remainder elements are at the
+            beginning of the array and should be excluded from the cumulative
+            sum
         """
 
         # input series must be a 1-dimensional array
         assert (np.array(series.shape) > 1).sum() <= 1
 
         assert len(series) > seasonal_periods
-        assert len(series) % seasonal_periods == 0
 
+        remainder = len(series) % seasonal_periods
+        remainder_elements = series[:remainder]
+        cumsum_elements = series[remainder:]
         cum_sums_by_period = [
-            np.cumsum(series[i::seasonal_periods]) 
+            np.cumsum(cumsum_elements[i::seasonal_periods]) 
             for i in range(seasonal_periods)]
         periodically_cumulated_array = np.vstack(cum_sums_by_period).flatten('F')
+        periodic_cumsum = np.concatenate(
+            [remainder_elements, periodically_cumulated_array])
 
-        return periodically_cumulated_array 
+        return periodic_cumsum  
 
 
     def de_difference_time_series(
@@ -216,7 +224,6 @@ class TimeSeriesDifferencing:
 
             # remove/"pop" used elements from 'prepend_vector'
             self.prepend_vector = self.prepend_vector[:-self.seasonal_periods]
-
 
         return combined_vector  
 
