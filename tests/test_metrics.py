@@ -404,6 +404,42 @@ def test_difference_time_series_seasonal_10():
     np.testing.assert_almost_equal(result, correct_result)
 
 
+def test_difference_time_series_seasonal_11():
+    """
+    Test seasonal differencing only
+    """
+
+    k_seasonal_diff = 1
+    seasonal_periods = 2
+    time_series = np.array([0.51182162, 0.9504637 , 0.14415961, 0.94864945])
+
+    ts_diff = TimeSeriesDifferencing()
+    result = ts_diff.difference_time_series_seasonal(
+        time_series, k_seasonal_diff, seasonal_periods)
+
+    correct_result = np.array([-0.36766201, -0.00181425])
+
+    np.testing.assert_almost_equal(result, correct_result)
+
+
+def test_difference_time_series_seasonal_12():
+    """
+    Test seasonal differencing only
+    """
+
+    k_seasonal_diff = 1
+    seasonal_periods = 1
+    time_series = np.array([0.51182162, 0.9504637 , 0.14415961, 0.94864945])
+
+    ts_diff = TimeSeriesDifferencing()
+    result = ts_diff.difference_time_series_seasonal(
+        time_series, k_seasonal_diff, seasonal_periods)
+
+    correct_result = np.array([ 0.43864208, -0.80630409,  0.80448984])
+
+    np.testing.assert_almost_equal(result, correct_result)
+
+
 def test_difference_time_series_01():
     """
     Test invalid input:  array with >1 dimension
@@ -499,20 +535,24 @@ def test_difference_time_series_04(
 @given(
     low=st.integers(min_value=-1000, max_value=1000),
     high=st.integers(min_value=-1000, max_value=1000),
-    arr_len=st.integers(min_value=100, max_value=1000),
+    arr_len_factor=st.integers(min_value=1, max_value=20),
     seed=st.integers(min_value=1, max_value=1_000_000),
     k_diff=st.integers(min_value=1, max_value=4),
     k_seasonal_diff=st.integers(min_value=1, max_value=4),
     seasonal_periods=st.integers(min_value=1, max_value=50))
 @settings(print_blob=True)
 def test_difference_time_series_05(
-    low: int, high: int, arr_len: int, seed: int, k_diff: int, 
+    low: int, high: int, arr_len_factor: int, seed: int, k_diff: int, 
     k_seasonal_diff: int, seasonal_periods: int):
     """
     Test simple and seasonal differencing
     """
 
     rng = np.random.default_rng(seed)
+    low = k_diff
+    high = max(low+1, seasonal_periods)
+    simple_len = rng.integers(low=low, high=high, size=1)
+    arr_len = (k_seasonal_diff * seasonal_periods * arr_len_factor) + simple_len
     time_series = low + (high - low) * rng.random(arr_len)
 
     ts_diff_0 = sarimax.diff(
@@ -523,8 +563,38 @@ def test_difference_time_series_05(
         k_diff=k_diff, k_seasonal_diff=k_seasonal_diff,
         seasonal_periods=seasonal_periods)
     ts_diff_1 = ts_diff.difference_time_series(time_series)
+    ts_diff_2 = ts_diff._difference_time_series_2(time_series)
+    np.testing.assert_almost_equal(ts_diff_0, ts_diff_2)
 
     np.testing.assert_almost_equal(ts_diff_0, ts_diff_1)
+
+    season_period_diff_len = k_seasonal_diff * seasonal_periods
+    diff_total = k_diff + season_period_diff_len 
+    assert len(ts_diff_0) == max(0, (len(time_series) - diff_total))
+
+
+def test_difference_time_series_06():
+    """
+    Test simple and seasonal differencing
+    """
+
+    k_diff = 1
+    k_seasonal_diff = 1
+    seasonal_periods = 2
+    time_series = np.array([3, 5, 2, 6])
+
+    ts_diff_0 = sarimax.diff(
+        time_series, k_diff=k_diff, k_seasonal_diff=k_seasonal_diff, 
+        seasonal_periods=seasonal_periods)
+
+    ts_diff = TimeSeriesDifferencing(
+        k_diff=k_diff, k_seasonal_diff=k_seasonal_diff,
+        seasonal_periods=seasonal_periods)
+    ts_diff_1 = ts_diff.difference_time_series(time_series)
+    ts_diff_2 = ts_diff._difference_time_series_2(time_series)
+
+    np.testing.assert_almost_equal(ts_diff_0, ts_diff_1)
+    np.testing.assert_almost_equal(ts_diff_0, ts_diff_2)
 
     season_period_diff_len = k_seasonal_diff * seasonal_periods
     diff_total = k_diff + season_period_diff_len 
@@ -898,6 +968,111 @@ def test_de_difference_time_series_15(
     k_diff = 0
     arr_len = k_seasonal_diff * seasonal_periods * arr_len_factor
     rng = np.random.default_rng(seed)
+    time_series = low + (high - low) * rng.random(arr_len)
+
+    ts_diff = TimeSeriesDifferencing(
+        k_diff=k_diff, k_seasonal_diff=k_seasonal_diff, 
+        seasonal_periods=seasonal_periods)
+    ts_diff_0 = ts_diff.difference_time_series(time_series)
+    ts_diff_1 = ts_diff.de_difference_time_series(ts_diff_0)
+
+    np.testing.assert_almost_equal(time_series, ts_diff_1, decimal=3)
+
+
+'''
+def test_de_difference_time_series_16():
+    """
+    Test simple and seasonal differencing:  invert differencing
+    """
+
+    k_diff = 1
+    k_seasonal_diff = 1
+    seasonal_periods = 1
+    time_series_1 = np.array([4, 7, 2])
+
+    ts_diff = TimeSeriesDifferencing(
+        k_diff=k_diff, k_seasonal_diff=k_seasonal_diff, 
+        seasonal_periods=seasonal_periods)
+    _ = ts_diff.difference_time_series(time_series_1)
+
+    time_series_2 = np.array([])
+    result = ts_diff.de_difference_time_series(time_series_2)
+
+    correct_result = np.array([4, 7, 2])
+
+    np.testing.assert_almost_equal(result, correct_result)
+'''
+
+
+def test_de_difference_time_series_16():
+    """
+    Test simple and seasonal differencing
+    """
+
+    k_diff = 1
+    k_seasonal_diff = 1
+    seasonal_periods = 2
+    time_series = np.array([3, 5, 2, 6])
+
+    ts_diff = TimeSeriesDifferencing(
+        k_diff=k_diff, k_seasonal_diff=k_seasonal_diff, 
+        seasonal_periods=seasonal_periods)
+    ts_diff_0 = ts_diff.difference_time_series(time_series)
+    ts_diff_1 = ts_diff.de_difference_time_series(ts_diff_0)
+
+    np.testing.assert_almost_equal(time_series, ts_diff_1, decimal=3)
+
+
+# @pytest.mark.skip(reason='Not implemented')
+def test_de_difference_time_series_17():
+    """
+    Test simple and seasonal differencing
+    """
+
+    k_diff = 1
+    k_seasonal_diff = 1
+    seasonal_periods = 2
+    time_series_1 = np.array([3, 5, 2, 6])
+
+    ts_diff = TimeSeriesDifferencing(
+        k_diff=k_diff, k_seasonal_diff=k_seasonal_diff, 
+        seasonal_periods=seasonal_periods)
+    _ = ts_diff.difference_time_series(time_series_1)
+
+    time_series_2 = np.array([1])
+    result = ts_diff.de_difference_time_series(time_series_2)
+
+    correct_result = np.array([3, 5, 2, 7])
+
+    np.testing.assert_almost_equal(result, correct_result)
+
+
+@given(
+    k_diff=st.integers(min_value=1, max_value=4),
+    k_seasonal_diff=st.integers(min_value=1, max_value=4),
+    seasonal_periods=st.integers(min_value=1, max_value=12),
+    arr_len_factor=st.integers(min_value=1, max_value=20),
+    low=st.integers(min_value=-1000, max_value=1000),
+    high=st.integers(min_value=-1000, max_value=1000),
+    seed=st.integers(min_value=1, max_value=1_000_000))
+@settings(print_blob=True)
+@reproduce_failure('6.111.2', b'AXicY2BgZGRAAgAAKwAD')
+def test_de_difference_time_series_18(
+    k_diff: int, k_seasonal_diff: int, seasonal_periods: int, 
+    arr_len_factor: int, low: int, high: int, seed: int):
+    """
+    Test simple and seasonal differencing:  invert differencing
+    """
+
+    # arr_len = max(2, k_seasonal_diff * seasonal_periods * arr_len_factor)
+    # rng = np.random.default_rng(seed)
+    # time_series = low + (high - low) * rng.random(arr_len)
+
+    rng = np.random.default_rng(seed)
+    low = k_diff
+    high = max(low+1, seasonal_periods)
+    simple_len = rng.integers(low=low, high=high, size=1)
+    arr_len = (k_seasonal_diff * seasonal_periods * arr_len_factor) + simple_len
     time_series = low + (high - low) * rng.random(arr_len)
 
     ts_diff = TimeSeriesDifferencing(
