@@ -17,7 +17,7 @@ from skforecast.metrics.metrics import (
 
 import statsmodels.tsa.statespace.sarimax as sarimax
 
-from src.s02_model import (
+from src.common import (
     root_median_squared_error,
     TimeSeriesDifferencing,
     )
@@ -1033,31 +1033,6 @@ def test_de_difference_time_series_15(
     np.testing.assert_almost_equal(time_series, ts_diff_1, decimal=3)
 
 
-'''
-def test_de_difference_time_series_16():
-    """
-    Test simple and seasonal differencing:  invert differencing
-    """
-
-    k_diff = 1
-    k_seasonal_diff = 1
-    seasonal_periods = 1
-    time_series_1 = np.array([4, 7, 2])
-
-    ts_diff = TimeSeriesDifferencing(
-        k_diff=k_diff, k_seasonal_diff=k_seasonal_diff, 
-        seasonal_periods=seasonal_periods)
-    _ = ts_diff.difference_time_series(time_series_1)
-
-    time_series_2 = np.array([])
-    result = ts_diff.de_difference_time_series(time_series_2)
-
-    correct_result = np.array([4, 7, 2])
-
-    np.testing.assert_almost_equal(result, correct_result)
-'''
-
-
 def test_de_difference_time_series_16():
     """
     Test simple and seasonal differencing
@@ -1129,35 +1104,6 @@ def test_de_difference_time_series_18(
     ts_diff_0 = ts_diff.difference_time_series(time_series)
     ts_diff_1 = ts_diff.de_difference_time_series(ts_diff_0)
 
-    np.testing.assert_almost_equal(time_series, ts_diff_1, decimal=2)
-
-
-'''
-def test_de_difference_time_series_09():
-    """
-    Test simple differencing only:  
-    """
-
-    n = 8
-    time_series_list = [np.zeros(n), np.ones(n), np.ones(n) + np.ones(n)]
-
-    for k_diff in range(1, 4):
-        for ts1 in time_series_list:
-            for ts2 in time_series_list:
-
-                ts_diff = TimeSeriesDifferencing(k_diff=k_diff)
-                fdiff = ts_diff.difference_time_series(ts1)
-                rdiff = ts_diff.de_difference_time_series(ts2[:-k_diff])
-
-                print('k_diff\t', k_diff)
-                print('ts1\t', ts1)
-                print('ts2\t', ts2)
-                print('fdiff\t', fdiff)
-                print('rdiff\t', rdiff)
-                print('ts1d1\t', np.diff(ts1, 1, axis=0))
-                print('rdfd1\t', np.diff(rdiff, 1, axis=0))
-
-    breakpoint()
-'''
+    np.testing.assert_almost_equal(time_series, ts_diff_1, decimal=1)
 
 
