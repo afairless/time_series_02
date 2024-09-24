@@ -125,6 +125,10 @@ class TimeSeriesDifferencing:
         """
         "De-difference" given time series vector, i.e., back-transform the 
             series so that the "forward" differencing procedure is reversed
+        'De-differencing' is often referred to as 'integrating', though Box, 
+            Jenkins, and Reinsel (Time Series Analysis:  Forecasting and 
+            Control, 3rd edition, Prentice Hall, Inc., 1994) on page 12 suggest
+            that the better term is 'summing'
 
         NOTE:  as cumulative sums are added from the start to the end of the
             vector, error from floating-point imprecision accumulates

@@ -219,7 +219,7 @@ def plot_differencing_and_autocorrelation(
 
     output_filepath = output_path / 'time_series_diff_autocorr.png'
     plot_time_series_differenced_and_autocorrelation(ts, output_filepath)
-    md.append(f'![Image]({output_filepath.name})')
+    md.append('![Image]({}){width=1024}'.format(output_filepath.name))
     md.append('\n')
 
     plt.rcParams.update({'figure.figsize': (6, 4)})
@@ -232,7 +232,7 @@ def plot_differencing_and_autocorrelation(
     plt.savefig(output_filepath)
     plt.clf()
     plt.close()
-    md.append(f'![Image]({output_filepath.name})')
+    md.append('![Image]({}){width=1024}'.format(output_filepath.name))
     md.append('\n')
 
     output_filepath = output_path / 'ts_2nd_diff_autocorr.png'
@@ -241,7 +241,7 @@ def plot_differencing_and_autocorrelation(
     plt.savefig(output_filepath)
     plt.clf()
     plt.close()
-    md.append(f'![Image]({output_filepath.name})')
+    md.append('![Image]({}){width=1024}'.format(output_filepath.name))
     md.append('\n')
 
     output_filepath = output_path / 'ts_3rd_diff_autocorr.png'
@@ -250,7 +250,7 @@ def plot_differencing_and_autocorrelation(
     plt.savefig(output_filepath)
     plt.clf()
     plt.close()
-    md.append(f'![Image]({output_filepath.name})')
+    md.append('![Image]({}){width=1024}'.format(output_filepath.name))
     md.append('\n')
 
     # partial autocorrelation
@@ -261,7 +261,7 @@ def plot_differencing_and_autocorrelation(
     plt.savefig(output_filepath)
     plt.clf()
     plt.close()
-    md.append(f'![Image]({output_filepath.name})')
+    md.append('![Image]({}){width=1024}'.format(output_filepath.name))
     md.append('\n')
 
     output_filepath = output_path / 'ts_2nd_diff_p_autocorr.png'
@@ -270,7 +270,7 @@ def plot_differencing_and_autocorrelation(
     plt.savefig(output_filepath)
     plt.clf()
     plt.close()
-    md.append(f'![Image]({output_filepath.name})')
+    md.append('![Image]({}){width=1024}'.format(output_filepath.name))
     md.append('\n')
 
     output_filepath = output_path / 'ts_3rd_diff_p_autocorr.png'
@@ -279,7 +279,7 @@ def plot_differencing_and_autocorrelation(
     plt.savefig(output_filepath)
     plt.clf()
     plt.close()
-    md.append(f'![Image]({output_filepath.name})')
+    md.append('![Image]({}){width=1024}'.format(output_filepath.name))
     md.append('\n')
 
     return md
@@ -345,7 +345,7 @@ def exploratory01():
     plot_time_series(ts_and_trend, 2, plot_filepath)
     md.append('Full time series with true trend')
     md.append('\n')
-    md.append(f'![Image]({plot_filepath.name})')
+    md.append('![Image]({}){width=1024}'.format(plot_filepath.name))
     md.append('\n')
 
     detrend_ts = ts - trend
@@ -353,7 +353,7 @@ def exploratory01():
     plot_time_series(detrend_ts.reshape(1, -1), 1, plot_filepath)
     md.append('Full detrended time series')
     md.append('\n')
-    md.append(f'![Image]({plot_filepath.name})')
+    md.append('![Image]({}){width=1024}'.format(plot_filepath.name))
     md.append('\n')
 
 
@@ -368,7 +368,7 @@ def exploratory01():
     plot_time_series(ts_train.reshape(1, -1), 1, plot_filepath)
     md.append('Time series training segment')
     md.append('\n')
-    md.append(f'![Image]({plot_filepath.name})')
+    md.append('![Image]({}){width=1024}'.format(plot_filepath.name))
     md.append('\n')
 
     detrend_ts_train = detrend_ts[:test_start_idx]
@@ -376,7 +376,7 @@ def exploratory01():
     plot_time_series(detrend_ts_train.reshape(1, -1), 1, plot_filepath)
     md.append('Detrended time series training segment')
     md.append('\n')
-    md.append(f'![Image]({plot_filepath.name})')
+    md.append('![Image]({}){width=1024}'.format(plot_filepath.name))
     md.append('\n')
 
     md.append(f'Length of time series training segment:  {len(ts_train)}')
@@ -505,7 +505,7 @@ def exploratory02():
         'Time series (blue), with seasonal differencing only (green), and '
         'with seasonal and simple differencing (orange)')
     md.append('\n')
-    md.append(f'![Image]({output_filepath.name})')
+    md.append('![Image]({}){width=1024}'.format(output_filepath.name))
     md.append('\n')
 
     output_filepath = output_path / 'time_series_season_diff_autocorr.png'
@@ -517,7 +517,7 @@ def exploratory02():
         'Time series (Series #0), with seasonal differencing only '
         '(Series #1), and with seasonal and simple differencing (Series #2)')
     md.append('\n')
-    md.append(f'![Image]({output_filepath.name})')
+    md.append('![Image]({}){width=1024}'.format(output_filepath.name))
     md.append('\n')
 
     md.append(
@@ -572,7 +572,7 @@ def exploratory03():
         'Time series (blue), with simple differencing only (green), and '
         'with seasonal differencing only (orange)')
     md.append('\n')
-    md.append(f'![Image]({output_filepath.name})')
+    md.append('![Image]({}){width=1024}'.format(output_filepath.name))
     md.append('\n')
 
     output_filepath = output_path / 'time_series_season_diff_autocorr.png'
@@ -584,7 +584,7 @@ def exploratory03():
         'Time series (Series #0), with simple differencing only (Series #1), '
         'and with seasonal differencing only (Series #2)')
     md.append('\n')
-    md.append(f'![Image]({output_filepath.name})')
+    md.append('![Image]({}){width=1024}'.format(output_filepath.name))
     md.append('\n')
 
     md.append(
@@ -669,7 +669,7 @@ def exploratory04():
         'from SARIMAX model with p, d, q = 0, 0, 0 and P, D, Q = 1, 1, 0 '
         '(orange)')
     md.append('\n')
-    md.append(f'![Image]({output_filepath.name})')
+    md.append('![Image]({}){width=1024}'.format(output_filepath.name))
     md.append('\n')
 
     output_filepath = output_path / 'time_series_season_diff_autocorr.png'
@@ -681,7 +681,7 @@ def exploratory04():
         'values from SARIMAX model with p, d, q = 0, 0, 0 and P, D, Q = 1, 1, 0 '
         '(Series #1)')
     md.append('\n')
-    md.append(f'![Image]({output_filepath.name})')
+    md.append('![Image]({}){width=1024}'.format(output_filepath.name))
     md.append('\n')
 
     md.append(
@@ -777,7 +777,7 @@ def exploratory05():
         'from SARIMAX model with p, d, q = 0, 0, 0 and P, D, Q = 1, 1, 0 '
         '(green), and with p, d, q = 0, 0, 1 and P, D, Q = 1, 1, 0 (orange)')
     md.append('\n')
-    md.append(f'![Image]({output_filepath.name})')
+    md.append('![Image]({}){width=1024}'.format(output_filepath.name))
     md.append('\n')
 
     output_filepath = output_path / 'time_series_season_diff_autocorr.png'
@@ -790,7 +790,7 @@ def exploratory05():
         '(Series #1), and with p, d, q = 0, 0, 1 and P, D, Q = 1, 1, 0 (Series '
         '#2)')
     md.append('\n')
-    md.append(f'![Image]({output_filepath.name})')
+    md.append('![Image]({}){width=1024}'.format(output_filepath.name))
     md.append('\n')
 
     md.append(
@@ -891,6 +891,8 @@ if __name__ == '__main__':
     # metrics:  RMSE, MAE, RMdSE, MdAE, 
     #   plus those 4 relative to benchmark (probably naive and seasonal naive) 
     #   maybe also relative to in-sample, i.e., scaled errors
+
+    # notebook as reference for statsmodels attributes
 
     # sklearn
     # statsmodels
