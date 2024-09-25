@@ -19,6 +19,9 @@ statsmodels = ">=0.14.2,<0.15"
 matplotlib = ">=3.9.2,<3.10"
 scikit-learn = ">=1.5.1,<1.6"
 pmdarima = ">=2.0.4,<2.1"
+jupyter = ">=1.1.1,<1.2"
+nbconvert = ">=7.16.4,<7.17"
+jupytext = ">=1.16.4,<1.17"
 
 [pypi-dependencies]
 skforecast = ">=0.12.0,<0.14"

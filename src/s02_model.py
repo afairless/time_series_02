@@ -219,7 +219,7 @@ def plot_differencing_and_autocorrelation(
 
     output_filepath = output_path / 'time_series_diff_autocorr.png'
     plot_time_series_differenced_and_autocorrelation(ts, output_filepath)
-    md.append('![Image]({}){width=1024}'.format(output_filepath.name))
+    md.append('![Image](' + output_filepath.name + '){width=1024}')
     md.append('\n')
 
     plt.rcParams.update({'figure.figsize': (6, 4)})
@@ -232,7 +232,7 @@ def plot_differencing_and_autocorrelation(
     plt.savefig(output_filepath)
     plt.clf()
     plt.close()
-    md.append('![Image]({}){width=1024}'.format(output_filepath.name))
+    md.append('![Image](' + output_filepath.name + '){width=1024}')
     md.append('\n')
 
     output_filepath = output_path / 'ts_2nd_diff_autocorr.png'
@@ -241,7 +241,7 @@ def plot_differencing_and_autocorrelation(
     plt.savefig(output_filepath)
     plt.clf()
     plt.close()
-    md.append('![Image]({}){width=1024}'.format(output_filepath.name))
+    md.append('![Image](' + output_filepath.name + '){width=1024}')
     md.append('\n')
 
     output_filepath = output_path / 'ts_3rd_diff_autocorr.png'
@@ -250,7 +250,7 @@ def plot_differencing_and_autocorrelation(
     plt.savefig(output_filepath)
     plt.clf()
     plt.close()
-    md.append('![Image]({}){width=1024}'.format(output_filepath.name))
+    md.append('![Image](' + output_filepath.name + '){width=1024}')
     md.append('\n')
 
     # partial autocorrelation
@@ -261,7 +261,7 @@ def plot_differencing_and_autocorrelation(
     plt.savefig(output_filepath)
     plt.clf()
     plt.close()
-    md.append('![Image]({}){width=1024}'.format(output_filepath.name))
+    md.append('![Image](' + output_filepath.name + '){width=1024}')
     md.append('\n')
 
     output_filepath = output_path / 'ts_2nd_diff_p_autocorr.png'
@@ -270,7 +270,7 @@ def plot_differencing_and_autocorrelation(
     plt.savefig(output_filepath)
     plt.clf()
     plt.close()
-    md.append('![Image]({}){width=1024}'.format(output_filepath.name))
+    md.append('![Image](' + output_filepath.name + '){width=1024}')
     md.append('\n')
 
     output_filepath = output_path / 'ts_3rd_diff_p_autocorr.png'
@@ -279,7 +279,7 @@ def plot_differencing_and_autocorrelation(
     plt.savefig(output_filepath)
     plt.clf()
     plt.close()
-    md.append('![Image]({}){width=1024}'.format(output_filepath.name))
+    md.append('![Image](' + output_filepath.name + '){width=1024}')
     md.append('\n')
 
     return md
@@ -345,7 +345,7 @@ def exploratory01():
     plot_time_series(ts_and_trend, 2, plot_filepath)
     md.append('Full time series with true trend')
     md.append('\n')
-    md.append('![Image]({}){width=1024}'.format(plot_filepath.name))
+    md.append('![Image](' + plot_filepath.name + '){width=1024}')
     md.append('\n')
 
     detrend_ts = ts - trend
@@ -353,7 +353,7 @@ def exploratory01():
     plot_time_series(detrend_ts.reshape(1, -1), 1, plot_filepath)
     md.append('Full detrended time series')
     md.append('\n')
-    md.append('![Image]({}){width=1024}'.format(plot_filepath.name))
+    md.append('![Image](' + plot_filepath.name + '){width=1024}')
     md.append('\n')
 
 
@@ -368,7 +368,7 @@ def exploratory01():
     plot_time_series(ts_train.reshape(1, -1), 1, plot_filepath)
     md.append('Time series training segment')
     md.append('\n')
-    md.append('![Image]({}){width=1024}'.format(plot_filepath.name))
+    md.append('![Image](' + plot_filepath.name + '){width=1024}')
     md.append('\n')
 
     detrend_ts_train = detrend_ts[:test_start_idx]
@@ -376,7 +376,7 @@ def exploratory01():
     plot_time_series(detrend_ts_train.reshape(1, -1), 1, plot_filepath)
     md.append('Detrended time series training segment')
     md.append('\n')
-    md.append('![Image]({}){width=1024}'.format(plot_filepath.name))
+    md.append('![Image](' + plot_filepath.name + '){width=1024}')
     md.append('\n')
 
     md.append(f'Length of time series training segment:  {len(ts_train)}')
@@ -505,7 +505,7 @@ def exploratory02():
         'Time series (blue), with seasonal differencing only (green), and '
         'with seasonal and simple differencing (orange)')
     md.append('\n')
-    md.append('![Image]({}){width=1024}'.format(output_filepath.name))
+    md.append('![Image](' + output_filepath.name + '){width=1024}')
     md.append('\n')
 
     output_filepath = output_path / 'time_series_season_diff_autocorr.png'
@@ -517,7 +517,7 @@ def exploratory02():
         'Time series (Series #0), with seasonal differencing only '
         '(Series #1), and with seasonal and simple differencing (Series #2)')
     md.append('\n')
-    md.append('![Image]({}){width=1024}'.format(output_filepath.name))
+    md.append('![Image](' + output_filepath.name + '){width=1024}')
     md.append('\n')
 
     md.append(
@@ -572,7 +572,7 @@ def exploratory03():
         'Time series (blue), with simple differencing only (green), and '
         'with seasonal differencing only (orange)')
     md.append('\n')
-    md.append('![Image]({}){width=1024}'.format(output_filepath.name))
+    md.append('![Image](' + output_filepath.name + '){width=1024}')
     md.append('\n')
 
     output_filepath = output_path / 'time_series_season_diff_autocorr.png'
@@ -584,7 +584,7 @@ def exploratory03():
         'Time series (Series #0), with simple differencing only (Series #1), '
         'and with seasonal differencing only (Series #2)')
     md.append('\n')
-    md.append('![Image]({}){width=1024}'.format(output_filepath.name))
+    md.append('![Image](' + output_filepath.name + '){width=1024}')
     md.append('\n')
 
     md.append(
@@ -637,8 +637,11 @@ def exploratory04():
     ts = df[row_idx, ts_colnames].to_numpy().reshape(-1)
     ts_train = ts[:test_start_idx]
 
-    ts_train_season_diff = sarimax.diff(
-        ts_train, k_diff=0, k_seasonal_diff=1, seasonal_periods=6)
+    # ts_train_season_diff = sarimax.diff(
+    #     ts_train, k_diff=0, k_seasonal_diff=1, seasonal_periods=6)
+    ts_diff = TimeSeriesDifferencing(
+        k_diff=0, k_seasonal_diff=1, seasonal_periods=6)
+    ts_train_season_diff = ts_diff.difference_time_series(ts_train)
 
     order = (0, 0, 0)
     season_period = df[0, 'season_period']
@@ -669,11 +672,11 @@ def exploratory04():
         'from SARIMAX model with p, d, q = 0, 0, 0 and P, D, Q = 1, 1, 0 '
         '(orange)')
     md.append('\n')
-    md.append('![Image]({}){width=1024}'.format(output_filepath.name))
+    md.append('![Image](' + output_filepath.name + '){width=1024}')
     md.append('\n')
 
     output_filepath = output_path / 'time_series_season_diff_autocorr.png'
-    ts_series_by_row = [ts_train_season_diff, fittedvalues]
+    ts_series_by_row = [ts_train, fittedvalues]
     plot_time_series_autocorrelation(ts_series_by_row, output_filepath)
 
     md.append(
@@ -681,7 +684,7 @@ def exploratory04():
         'values from SARIMAX model with p, d, q = 0, 0, 0 and P, D, Q = 1, 1, 0 '
         '(Series #1)')
     md.append('\n')
-    md.append('![Image]({}){width=1024}'.format(output_filepath.name))
+    md.append('![Image](' + output_filepath.name + '){width=1024}')
     md.append('\n')
 
     md.append(
@@ -690,6 +693,24 @@ def exploratory04():
         'small spikes at 6 and 12, so an additional seasonal term of order 2 '
         'might help.  Additionally, both ACF and PACF show large spikes at 1, '
         'so a non-seasonal AR or MA term of order 1 would be useful. ')
+    md.append('\n')
+
+    output_filepath = output_path / 'time_series_season_dediff.png'
+    fittedvalues_dediff = ts_diff.de_difference_time_series(fittedvalues)
+    plt.plot(ts_train, alpha=0.5, color='blue')
+    plt.plot(fittedvalues_dediff, alpha=0.5, color='orange')
+    plt.title('Time series, with de-differencing')
+    plt.tight_layout()
+    plt.savefig(output_filepath)
+    plt.clf()
+    plt.close()
+
+    md.append(
+        'Original time series (blue), and de-differenced fitted values from '
+        'SARIMAX model with p, d, q = 0, 0, 0 and P, D, Q = 1, 1, 0 '
+        '(Series #1)')
+    md.append('\n')
+    md.append('![Image](' + output_filepath.name + '){width=1024}')
     md.append('\n')
 
     # magnitudes of spike at 1 on ACF and PACF are nearly identical, so I don't
@@ -726,8 +747,11 @@ def exploratory05():
     ts = df[row_idx, ts_colnames].to_numpy().reshape(-1)
     ts_train = ts[:test_start_idx]
 
-    ts_train_season_diff = sarimax.diff(
-        ts_train, k_diff=0, k_seasonal_diff=1, seasonal_periods=6)
+    # ts_train_season_diff = sarimax.diff(
+    #     ts_train, k_diff=0, k_seasonal_diff=1, seasonal_periods=6)
+    ts_diff = TimeSeriesDifferencing(
+        k_diff=0, k_seasonal_diff=1, seasonal_periods=6)
+    ts_train_season_diff = ts_diff.difference_time_series(ts_train)
 
 
     # model 1
@@ -777,7 +801,7 @@ def exploratory05():
         'from SARIMAX model with p, d, q = 0, 0, 0 and P, D, Q = 1, 1, 0 '
         '(green), and with p, d, q = 0, 0, 1 and P, D, Q = 1, 1, 0 (orange)')
     md.append('\n')
-    md.append('![Image]({}){width=1024}'.format(output_filepath.name))
+    md.append('![Image](' + output_filepath.name + '){width=1024}')
     md.append('\n')
 
     output_filepath = output_path / 'time_series_season_diff_autocorr.png'
@@ -790,7 +814,7 @@ def exploratory05():
         '(Series #1), and with p, d, q = 0, 0, 1 and P, D, Q = 1, 1, 0 (Series '
         '#2)')
     md.append('\n')
-    md.append('![Image]({}){width=1024}'.format(output_filepath.name))
+    md.append('![Image](' + output_filepath.name + '){width=1024}')
     md.append('\n')
 
     md.append(
@@ -805,6 +829,31 @@ def exploratory05():
         'complex model would be needed -- a conclusion supported by the small, '
         'persisting spikes in the ACF and PACF and by the parameters by which '
         'I created the synthetic data.')
+    md.append('\n')
+
+    output_filepath = output_path / 'time_series_season_dediff.png'
+    fittedvalues_dediff_1 = ts_diff.de_difference_time_series(fittedvalues_1)
+    fittedvalues_dediff_2 = ts_diff.de_difference_time_series(fittedvalues_2)
+    plt.plot(ts_train, alpha=0.5, color='blue')
+    plt.plot(fittedvalues_dediff_1, alpha=0.5, color='green')
+    plt.plot(fittedvalues_dediff_2, alpha=0.5, color='orange')
+    plt.title('Time series, with de-differencing')
+    plt.tight_layout()
+    plt.savefig(output_filepath)
+    plt.clf()
+    plt.close()
+
+    md.append(
+        'Original time series (blue), and de-differenced fitted values from '
+        'SARIMAX model with p, d, q = 0, 0, 0 and P, D, Q = 1, 1, 0 '
+        '(Series #1)')
+    md.append(
+        'Original time series with seasonal differencing only (blue), and '
+        'de-differenced fitted values from SARIMAX model with p, d, q = 0, 0, 0 '
+        ' and P, D, Q = 1, 1, 0 (green), and with p, d, q = 0, 0, 1 and '
+        'P, D, Q = 1, 1, 0 (orange)')
+    md.append('\n')
+    md.append('![Image](' + output_filepath.name + '){width=1024}')
     md.append('\n')
 
     write_list_to_text_file(md, md_filepath, True)
