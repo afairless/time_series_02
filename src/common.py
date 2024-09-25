@@ -4,6 +4,10 @@ import numpy as np
 from pathlib import Path
 from dataclasses import dataclass, field
 
+import matplotlib.pyplot as plt
+
+import statsmodels.graphics.tsaplots as tsa_plots
+
 
 @dataclass
 class TimeSeriesDifferencing:
@@ -240,5 +244,29 @@ def convert_path_to_relative_path_str(path: Path) -> str:
 
 def root_median_squared_error(y_true, y_pred):
     return np.sqrt(np.median((y_true - y_pred) ** 2))
+
+
+def plot_time_series_autocorrelation(
+    ts: list[np.ndarray], output_filepath: Path=Path('plot.png')):
+    """
+
+    Adapted from:
+        https://www.machinelearningplus.com/time-series/arima-model-time-series-forecasting-python/
+    """
+
+    plt.rcParams.update({'figure.figsize': (16, 3*len(ts))})
+
+    fig, axes = plt.subplots(len(ts), 3, sharex=False)
+
+    for i, _ in enumerate(ts):
+        axes[i, 0].plot(ts[i]); axes[i, 0].set_title(f'Series #{i}')
+        tsa_plots.plot_acf(ts[i], ax=axes[i, 1])
+        tsa_plots.plot_pacf(ts[i], ax=axes[i, 2])
+
+    plt.tight_layout()
+
+    plt.savefig(output_filepath)
+    plt.clf()
+    plt.close()
 
 

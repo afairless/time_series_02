@@ -22,6 +22,7 @@ if __name__ == '__main__':
         TimeSeriesDifferencing,
         write_list_to_text_file,
         root_median_squared_error,
+        plot_time_series_autocorrelation,
         )
 
 else:
@@ -34,6 +35,7 @@ else:
         TimeSeriesDifferencing,
         write_list_to_text_file,
         root_median_squared_error,
+        plot_time_series_autocorrelation,
         )
 
 
@@ -283,30 +285,6 @@ def plot_differencing_and_autocorrelation(
     md.append('\n')
 
     return md
-
-
-def plot_time_series_autocorrelation(
-    ts: list[np.ndarray], output_filepath: Path=Path('plot.png')):
-    """
-
-    Adapted from:
-        https://www.machinelearningplus.com/time-series/arima-model-time-series-forecasting-python/
-    """
-
-    plt.rcParams.update({'figure.figsize': (16, 3*len(ts))})
-
-    fig, axes = plt.subplots(len(ts), 3, sharex=False)
-
-    for i, _ in enumerate(ts):
-        axes[i, 0].plot(ts[i]); axes[i, 0].set_title(f'Series #{i}')
-        tsa_plots.plot_acf(ts[i], ax=axes[i, 1])
-        tsa_plots.plot_pacf(ts[i], ax=axes[i, 2])
-
-    plt.tight_layout()
-
-    plt.savefig(output_filepath)
-    plt.clf()
-    plt.close()
 
 
 def exploratory01():
@@ -764,8 +742,8 @@ def exploratory05():
 
     model_1 = sarimax.SARIMAX(
         ts_train_season_diff, order=order, seasonal_order=seasonal_order).fit()
+    assert isinstance(model_1, sarimax.SARIMAXResultsWrapper)
     fittedvalues_1 = model_1.fittedvalues
-    assert isinstance(fittedvalues_1, np.ndarray)
 
 
     # model 2
@@ -779,8 +757,8 @@ def exploratory05():
 
     model_2 = sarimax.SARIMAX(
         ts_train_season_diff, order=order, seasonal_order=seasonal_order).fit()
+    assert isinstance(model_2, sarimax.SARIMAXResultsWrapper)
     fittedvalues_2 = model_2.fittedvalues
-    assert isinstance(fittedvalues_2, np.ndarray)
 
 
     md.append('# Looking at model fit on differenced time series')
@@ -905,8 +883,8 @@ def main():
 
     model_2 = sarimax.SARIMAX(
         ts_train_season_diff, order=order, seasonal_order=seasonal_order).fit()
+    assert isinstance(model_2, sarimax.SARIMAXResultsWrapper)
     fittedvalues_2 = model_2.fittedvalues
-    assert isinstance(fittedvalues_2, np.ndarray)
 
     dir(model_2)
     model_2._params_ar
