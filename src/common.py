@@ -1,5 +1,6 @@
 #! /usr/bin/env python3
 
+import subprocess
 import numpy as np
 from pathlib import Path
 from dataclasses import dataclass, field
@@ -208,6 +209,24 @@ class TimeSeriesDifferencing:
             self.prepend_vector = self.prepend_vector[:-self.seasonal_periods]
 
         return combined_vector  
+
+
+def get_git_root_path() -> Path | None:
+    """
+    Returns the top-level project directory where the Git repository is defined
+    """
+
+    try:
+        # Run the git command to get the top-level directory
+        git_root = subprocess.check_output(
+            ['git', 'rev-parse', '--show-toplevel'], 
+            stderr=subprocess.STDOUT)
+        git_root_path = Path(git_root.decode('utf-8').strip())
+        return git_root_path 
+
+    except subprocess.CalledProcessError as e:
+        print('Error while trying to find the Git root:', e.output.decode())
+        return None
 
 
 def write_list_to_text_file(

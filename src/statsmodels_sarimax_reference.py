@@ -1,5 +1,7 @@
-#! /usr/bin/env python3
 
+# +
+import os
+import subprocess
 import numpy as np
 import polars as pl
 from pathlib import Path
@@ -11,6 +13,30 @@ import statsmodels.tsa.stattools as tsa_tools
 import statsmodels.tsa.statespace.sarimax as sarimax
 import statsmodels.graphics.tsaplots as tsa_plots
 
+
+def get_git_root_path() -> Path | None:
+    """
+    Returns the top-level project directory where the Git repository is defined
+    """
+
+    try:
+        # Run the git command to get the top-level directory
+        git_root = subprocess.check_output(
+            ['git', 'rev-parse', '--show-toplevel'], 
+            stderr=subprocess.STDOUT)
+        git_root_path = Path(git_root.decode('utf-8').strip())
+        return git_root_path 
+
+    except subprocess.CalledProcessError as e:
+        print('Error while trying to find the Git root:', e.output.decode())
+        return None
+
+
+project_root_path = get_git_root_path()
+assert isinstance(project_root_path, Path)
+os.chdir(project_root_path)
+
+
 if __name__ == '__main__':
 
     from s01_generate_data import (
@@ -21,6 +47,7 @@ if __name__ == '__main__':
         )
 
     from common import (
+        # get_git_root_path,
         plot_time_series_autocorrelation,
         )
 
@@ -34,10 +61,12 @@ else:
         )
 
     from src.common import (
+        # get_git_root_path,
         plot_time_series_autocorrelation,
         )
+# -
 
-
+# +
 def create_time_series_with_params(
     seed: int=761824, series_n: int=1) -> TimeSeriesParameters:
     """
@@ -108,36 +137,43 @@ def plot_time_series_and_model_values(
     plt.savefig(output_filepath)
     plt.clf()
     plt.close()
-
+# -
 
 
 # ## Set directories
 
+# +
 input_path = Path.cwd() / 'output'
-input_filepath = input_path / f'time_series.parquet'
+input_filepath = input_path / 'time_series.parquet'
 df = pl.read_parquet(input_filepath)
 
 output_path = input_path / 'model01' / 'sarima02'
 output_path.mkdir(exist_ok=True, parents=True)
+# -
 
 
 # ## Generate time series 
 
+# +
 ts_params = create_time_series_with_params(seed=258041)
 ts = ts_params.time_series[0]
+# -
 
 
 # ## Pre-process series 
 
+# +
 train_len = int(len(ts) * 0.6)
 test_start_idx = train_len
 
 ts_train = ts[:test_start_idx]
 ts_test = ts[test_start_idx:]
+# -
 
 
 # ## Fit model
 
+# +
 # order = p, d, q | AR, difference, MA
 order = (0, 0, 1)
 
@@ -146,12 +182,28 @@ order = (0, 0, 1)
 
 model_1 = sarimax.SARIMAX(ts_train, order=order).fit()
 assert isinstance(model_1, sarimax.SARIMAXResultsWrapper)
+# -
 
 
 # ## Plot original series and fitted values
 
+# +
 output_filepath = output_path / 'model_fit_and_forecast.png'
 plot_time_series_and_model_values(ts, model_1, output_filepath)
+output_filepath
+# -
+
+# +
+Path.cwd()
+# -
+
+# + [markdown]
+f'''
+Here is the image
+
+Here is the image
+'''
+# - 
 
 coef_str = 'lag_polynomial_coefficients'
 for field in fields(ts_params):
