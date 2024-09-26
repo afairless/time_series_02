@@ -201,6 +201,22 @@ Path.cwd()
 f'''
 Here is the image
 
+![image]({output_filepath._str})
+
+![image]('/media/gv/My Passport1/backup/data play/time_series/bernstein01/output/model01/sarima02/model_fit_and_forecast.png')
+
+![image]('./output/model01/sarima02/model_fit_and_forecast.png')
+
+![image]('/output/model01/sarima02/model_fit_and_forecast.png')
+
+![image]('model_fit_and_forecast.png')
+
+![image](./output/model01/sarima02/model_fit_and_forecast.png)
+
+![image](/output/model01/sarima02/model_fit_and_forecast.png)
+
+![image](model_fit_and_forecast.png)
+
 Here is the image
 '''
 # - 
