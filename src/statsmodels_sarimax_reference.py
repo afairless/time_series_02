@@ -1,3 +1,13 @@
+# + [markdown]
+'''
+The primary purpose of this notebook is to serve as a convenient reference for 
+    the various model internals/attributes/methods available for a SARIMAX model
+    (which mostly applies to statsmodels time series state space models in 
+    general)
+The notebook fits a SARIMAX model to a synthetic time series and then produces
+    various plots, metrics, and other print-outs about the model
+'''
+# - 
 
 # +
 import os
@@ -5,7 +15,7 @@ import subprocess
 import numpy as np
 import polars as pl
 from pathlib import Path
-from dataclasses import dataclass, fields
+from dataclasses import fields
 
 import matplotlib.pyplot as plt
 
@@ -142,7 +152,7 @@ def create_time_series_with_params(
     return ts_params
 
 
-def plot_time_series_and_model_values(
+def plot_time_series_and_model_values_1(
     original_series: np.ndarray, model_result: sarimax.SARIMAXResultsWrapper,
     output_filepath: Path=Path('plot.png')):
 
@@ -157,6 +167,45 @@ def plot_time_series_and_model_values(
     plt.plot(forecast_idx, forecast, alpha=0.5, color='orange')
 
     plt.title('Original series (blue), fitted values (green), forecast (orange)')
+    plt.tight_layout()
+
+    plt.savefig(output_filepath)
+    plt.clf()
+    plt.close()
+
+
+def plot_time_series_and_model_values_2(
+    original_series: np.ndarray, model_result: sarimax.SARIMAXResultsWrapper,
+    output_filepath: Path=Path('plot.png')):
+
+    prediction = model_result.predict(start=0, end=len(original_series))
+
+    plt.plot(original_series, alpha=0.5, color='blue')
+    plt.plot(prediction, alpha=0.5, color='green')
+
+    plt.title(
+        'Original series (blue), model values (green), fit vs. forecast (red)')
+    plt.axvline(x=len(model_result.fittedvalues), color='red', linestyle='--')
+    plt.tight_layout()
+
+    plt.savefig(output_filepath)
+    plt.clf()
+    plt.close()
+
+
+def plot_time_series_and_model_values_3(
+    original_series: np.ndarray, model_result: sarimax.SARIMAXResultsWrapper,
+    output_filepath: Path=Path('plot.png')):
+
+    simulations = model_result.simulate(
+        nsimulations=len(original_series), repetitions=50).squeeze()
+
+    plt.plot(simulations, alpha=0.1, color='green')
+    plt.plot(original_series, alpha=0.9, color='blue')
+
+    plt.title(
+        'Original series (blue), simulated values based on model (green)')
+    plt.axvline(x=len(model_result.fittedvalues), color='red', linestyle='--')
     plt.tight_layout()
 
     plt.savefig(output_filepath)
@@ -200,7 +249,7 @@ ts_test = ts[test_start_idx:]
 
 # +
 # order = p, d, q | AR, difference, MA
-order = (1, 0, 1)
+order = (2, 0, 2)
 
 # seasonal_order = P, D, Q, period | AR, difference, MA, period
 # seasonal_order = (0, 0, 0, 1)
@@ -213,8 +262,35 @@ assert isinstance(model_1, sarimax.SARIMAXResultsWrapper)
 # ## Plot original series and fitted values
 
 # +
-output_filepath = output_path / 'model_fit_and_forecast.png'
-plot_time_series_and_model_values(ts, model_1, output_filepath)
+output_filepath = output_path / 'model_fit_and_forecast_1.png'
+plot_time_series_and_model_values_1(ts, model_1, output_filepath)
+
+if is_notebook():
+    display(Image(output_filepath._str))
+# - 
+
+# +
+output_filepath = output_path / 'model_fit_and_forecast_2.png'
+plot_time_series_and_model_values_2(ts, model_1, output_filepath)
+
+if is_notebook():
+    display(Image(output_filepath._str))
+# - 
+
+# +
+output_filepath = output_path / 'model_fit_and_forecast_3.png'
+plot_time_series_and_model_values_3(ts, model_1, output_filepath)
+
+if is_notebook():
+    display(Image(output_filepath._str))
+# - 
+
+# +
+output_filepath = output_path / 'model_diagnostics.png'
+fig = model_1.plot_diagnostics()
+plt.savefig(output_filepath)
+plt.clf()
+plt.close()
 
 if is_notebook():
     display(Image(output_filepath._str))
@@ -243,6 +319,27 @@ if is_notebook():
     display(Image(output_filepath._str))
 # -
 
+# ## Summary
+
+# +
+model_1.summary()
+# -
+# +
+model_1.specification
+# -
+# +
+model_1._init_kwds
+# -
+# +
+model_1.nobs
+# -
+# +
+model_1.nobs_effective
+# -
+# +
+model_1.nobs_diffuse
+# -
+
 # ## Parameters
 
 # + [markdown]
@@ -255,12 +352,27 @@ model_1.param_terms
 # +
 model_1.params
 # - 
+
 # + [markdown]
 '''
 Standard errors of parameter estimates
 '''
 # +
 model_1.bse
+# -
+
+# + [markdown]
+'''
+Confidence intervals of parameter estimates
+'''
+# +
+model_1.conf_int(alpha=0.05)
+# -
+# +
+model_1.params + 1.96 * model_1.bse
+# -
+# +
+model_1.params - 1.96 * model_1.bse
 # -
 
 # +
@@ -276,10 +388,16 @@ Fitted model AR and MA parameters
 model_1.arparams
 # -
 # +
+model_1.polynomial_ar
+# -
+# +
 model_1._params_ar
 # -
 # +
 model_1.maparams
+# -
+# +
+model_1.polynomial_ma
 # -
 # +
 model_1._params_ma
@@ -291,10 +409,16 @@ model_1.seasonalarparams
 model_1._params_seasonal_ar
 # -
 # +
+model_1.polynomial_seasonal_ar
+# -
+# +
 model_1.seasonalmaparams
 # -
 # +
 model_1._params_seasonal_ma
+# -
+# +
+model_1.polynomial_seasonal_ma
 # -
 
 # + [markdown]
@@ -357,6 +481,9 @@ Mean squared error
 model_1.mse
 # -
 # +
+model_1._params_variance
+# -
+# +
 ((ts[:len(model_1.fittedvalues)] - model_1.fittedvalues)**2).mean()
 # -
 
@@ -378,6 +505,12 @@ Akaike Information Criterion (AIC)
 # +
 model_1.aic
 # -
+# +
+model_1.info_criteria('aic', method='standard')
+# -
+# +
+model_1.info_criteria('aic', method='lutkepohl')
+# -
 
 # + [markdown]
 '''
@@ -394,6 +527,12 @@ Bayesian Information Criterion (BIC)
 # +
 model_1.bic
 # -
+# +
+model_1.info_criteria('bic', method='standard')
+# -
+# +
+model_1.info_criteria('bic', method='lutkepohl')
+# -
 
 # + [markdown]
 '''
@@ -401,6 +540,12 @@ Hannan-Quinn Information Criterion (BIC)
 '''
 # +
 model_1.hqic
+# -
+# +
+model_1.info_criteria('hqic', method='standard')
+# -
+# +
+model_1.info_criteria('hqic', method='lutkepohl')
 # -
 
 # + [markdown]
@@ -422,21 +567,33 @@ len(model_1.llf_obs)
 model_1.llf_obs
 # -
 
-# ## Residuals`
+# ## Residuals
 
 # + [markdown]
 '''
-Mean absolute error
+Residuals
 '''
 # +
-len(model_1.resid)
+model_1.resid.shape
 # -
 # +
 model_1.resid
 # -
+# +
+model_1.standardized_forecasts_error.shape
+# -
+# +
+model_1.standardized_forecasts_error
+# -
+# +
+model_1.resid / model_1.standardized_forecasts_error
+# -
 
 # ## Covariance
 
+# +
+model_1.cov_params()
+# -
 # +
 model_1.cov_params_approx
 # -
@@ -455,8 +612,303 @@ model_1.cov_params_robust_approx
 # +
 model_1.cov_params_robust_oim
 # -
+# +
+model_1.cov_kwds
+# -
+
+# ## Diagnostic hypothesis tests
 
 # +
-# model_1.get_smoothed_decomposition()
+model_1.test_serial_correlation(method='ljungbox')
 # -
+# +
+model_1.test_serial_correlation(method='boxpierce')
+# -
+# +
+model_1.test_heteroskedasticity(method='breakvar')
+# -
+# +
+model_1.test_normality(method='jarquebera')
+# -
+
+# ## Degrees of freedom
+
+# +
+model_1.df_model
+# -
+# +
+model_1.df_resid
+# -
+
+# ## States
+
+# +
+row_n = 4
+dir(model_1.states)
+# -
+# +
+model_1.df_resid
+# -
+
+# + [markdown]
+'''
+Filtered states
+'''
+
+# +
+model_1.states.filtered.shape
+# -
+# +
+model_1.states.filtered[:row_n, :]
+# -
+# +
+model_1.states.filtered_cov.shape
+# -
+# +
+model_1.states.filtered_cov[:row_n, :, :]
+# -
+
+# + [markdown]
+'''
+Predicted states
+'''
+
+# +
+model_1.states.predicted.shape
+# -
+# +
+model_1.states.predicted[:row_n, :]
+# -
+# +
+model_1.states.predicted_cov.shape
+# -
+# +
+model_1.states.predicted_cov[:row_n, :, :]
+# -
+
+# + [markdown]
+'''
+Smoothed states
+'''
+
+# +
+model_1.states.smoothed.shape
+# -
+# +
+model_1.states.smoothed[:row_n, :]
+# -
+# +
+model_1.states.smoothed_cov.shape
+# -
+# +
+model_1.states.smoothed_cov[:row_n, :, :]
+# -
+
+# + [markdown]
+'''
+Fitted values
+'''
+
+# +
+len(model_1.fittedvalues)
+# -
+# +
+model_1.forecasts == model_1.fittedvalues
+# -
+# +
+(model_1.forecasts == model_1.fittedvalues).all()
+# -
+
+# ## Smoothed
+
+# + [markdown]
+'''
+Smoothed state
+'''
+
+# +
+model_1.states.smoothed.shape
+# -
+# +
+model_1.smoothed_state.shape
+# -
+# +
+(model_1.states.smoothed == model_1.smoothed_state.T).all()
+# -
+# +
+
+# + [markdown]
+'''
+Smoothed state covariance
+'''
+
+# +
+model_1.smoothed_state_cov.shape
+# -
+# +
+model_1.states.smoothed_cov.shape
+# -
+# +
+(model_1.smoothed_state_cov.transpose(2, 0, 1) == model_1.states.smoothed_cov).all()
+# -
+# +
+model_1.scaled_smoothed_estimator.shape
+# -
+# +
+model_1.scaled_smoothed_estimator_cov.shape
+# -
+# +
+model_1.smoothed_measurement_disturbance.shape
+# -
+# +
+model_1.smoothed_measurement_disturbance_cov.shape
+# -
+# +
+model_1.smoothed_state_autocov.shape
+# -
+# +
+model_1.smoothed_state_disturbance.shape
+# -
+# +
+model_1.smoothing_error.shape
+# -
+# +
+smoothed_results = model_1.get_smoothed_decomposition()
+smoothed_results[0].shape
+# -
+# +
+smoothed_results[0].head()
+# -
+# +
+smoothed_results[1].shape
+# -
+# +
+smoothed_results[1].head()
+# -
+# +
+smoothed_results[2].shape
+# -
+# +
+smoothed_results[2].head()
+# -
+# +
+smoothed_results[3].shape
+# -
+# +
+smoothed_results[3].head()
+# -
+
+# ## Miscellaneous
+
+# +
+model_1.k_constant
+# -
+# +
+model_1.scale
+# -
+# +
+model_1.k_diffuse_states
+# -
+# +
+model_1.polynomial_trend
+# -
+# +
+model_1._rank
+# -
+# +
+model_1._init_kwds
+# -
+
+# +
 # dir(model_1)
+# model_1.wald_test()
+# model_1.wald_test_terms()
+# model_1.t_test()
+# -
+
+# ## TSA plots
+
+# + [markdown]
+'''
+Autocorrelation function
+'''
+# +
+tsa_plots.acf(x=ts)
+# -
+# +
+output_filepath = output_path / 'autocorrelation.png'
+fig = tsa_plots.plot_acf(x=ts)
+plt.savefig(output_filepath)
+plt.clf()
+plt.close()
+
+if is_notebook():
+    display(Image(output_filepath._str))
+# -
+
+# + [markdown]
+'''
+Partial autocorrelation function
+'''
+# +
+tsa_plots.pacf(x=ts)
+# -
+# +
+output_filepath = output_path / 'partial_autocorrelation.png'
+fig = tsa_plots.plot_pacf(x=ts)
+plt.savefig(output_filepath)
+plt.clf()
+plt.close()
+
+if is_notebook():
+    display(Image(output_filepath._str))
+# -
+
+# + [markdown]
+'''
+Cross-correlation function, original series with model predictions
+'''
+# +
+tsa_plots.ccf(x=ts, y=model_1.predict(start=0, end=len(ts)-1))
+# - 
+# +
+output_filepath = output_path / 'crosscorrelation_original_and_predictions.png'
+fig = tsa_plots.plot_ccf(x=ts, y=model_1.predict(start=0, end=len(ts)-1))
+plt.savefig(output_filepath)
+plt.clf()
+plt.close()
+
+if is_notebook():
+    display(Image(output_filepath._str))
+# -
+
+# + [markdown]
+'''
+Cross-correlation function, original series with model residuals
+'''
+# +
+tsa_plots.ccf(x=ts[:len(model_1.resid)], y=model_1.resid)
+# - 
+# +
+output_filepath = output_path / 'crosscorrelation_original_and_residuals.png'
+fig = tsa_plots.plot_ccf(x=ts[:len(model_1.resid)], y=model_1.resid)
+plt.savefig(output_filepath)
+plt.clf()
+plt.close()
+
+if is_notebook():
+    display(Image(output_filepath._str))
+# -
+
+# ## TSA tools
+
+# + [markdown]
+'''
+List of available tools
+'''
+# +
+dir(tsa_tools)
+# -
+# +
+dir(tsa_tools.stats)
+# -
