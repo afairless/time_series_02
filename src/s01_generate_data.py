@@ -13,6 +13,12 @@ from statsmodels.tsa.arima_process import ArmaProcess
 import matplotlib.pyplot as plt
 
 
+if __name__ == '__main__':
+    from common import plot_time_series
+else:
+    from src.common import plot_time_series
+
+
 @dataclass
 class TimeSeriesTrendSegments:
 
@@ -315,26 +321,6 @@ def convert_time_series_parameters_to_dataframe(
     ts_params_df = pl.concat([params_df, ts_df], how='horizontal')
 
     return ts_params_df
-
-
-def plot_time_series(
-    time_series: np.ndarray, series_n_to_plot: int=1, 
-    output_filepath: Path=Path('plot.png')):
-
-    assert series_n_to_plot <= time_series.shape[0]
-
-    # plt.figure(figsize=(12, 3))
-    for srs in time_series[:series_n_to_plot]:
-        plt.plot(srs, alpha=0.5)
-
-    plt.title('Time Series')
-    plt.xlabel('Time Index')
-    plt.ylabel('Value')
-
-    plt.savefig(output_filepath)
-
-    plt.clf()
-    plt.close()
 
 
 def create_time_series_with_params_example_01() -> TimeSeriesParameters:

@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 import matplotlib.pyplot as plt
 
 import statsmodels.graphics.tsaplots as tsa_plots
+import statsmodels.tsa.statespace.sarimax as sarimax
 
 
 @dataclass
@@ -265,6 +266,30 @@ def root_median_squared_error(y_true, y_pred):
     return np.sqrt(np.median((y_true - y_pred) ** 2))
 
 
+##################################################
+# TIME SERIES PLOTS
+##################################################
+
+def plot_time_series(
+    time_series: np.ndarray, series_n_to_plot: int=1, 
+    output_filepath: Path=Path('plot.png')):
+
+    assert series_n_to_plot <= time_series.shape[0]
+
+    # plt.figure(figsize=(12, 3))
+    for srs in time_series[:series_n_to_plot]:
+        plt.plot(srs, alpha=0.5)
+
+    plt.title('Time Series')
+    plt.xlabel('Time Index')
+    plt.ylabel('Value')
+
+    plt.savefig(output_filepath)
+
+    plt.clf()
+    plt.close()
+
+
 def plot_time_series_autocorrelation(
     ts: list[np.ndarray], output_filepath: Path=Path('plot.png')):
     """
@@ -289,3 +314,62 @@ def plot_time_series_autocorrelation(
     plt.close()
 
 
+def plot_time_series_and_model_values_1(
+    original_series: np.ndarray, model_result: sarimax.SARIMAXResultsWrapper,
+    output_filepath: Path=Path('plot.png')):
+
+    train_steps_n = len(model_result.fittedvalues)
+    forecast_steps_n = len(original_series) - train_steps_n
+    forecast = model_result.forecast(steps=forecast_steps_n)
+
+    plt.plot(original_series, alpha=0.5, color='blue')
+    plt.plot(model_result.fittedvalues, alpha=0.5, color='green')
+
+    forecast_idx = range(train_steps_n, train_steps_n + forecast_steps_n)
+    plt.plot(forecast_idx, forecast, alpha=0.5, color='orange')
+
+    plt.title('Original series (blue), fitted values (green), forecast (orange)')
+    plt.tight_layout()
+
+    plt.savefig(output_filepath)
+    plt.clf()
+    plt.close()
+
+
+def plot_time_series_and_model_values_2(
+    original_series: np.ndarray, model_result: sarimax.SARIMAXResultsWrapper,
+    output_filepath: Path=Path('plot.png')):
+
+    prediction = model_result.predict(start=0, end=len(original_series))
+
+    plt.plot(original_series, alpha=0.5, color='blue')
+    plt.plot(prediction, alpha=0.5, color='green')
+
+    plt.title(
+        'Original series (blue), model values (green), fit vs. forecast (red)')
+    plt.axvline(x=len(model_result.fittedvalues), color='red', linestyle='--')
+    plt.tight_layout()
+
+    plt.savefig(output_filepath)
+    plt.clf()
+    plt.close()
+
+
+def plot_time_series_and_model_values_3(
+    original_series: np.ndarray, model_result: sarimax.SARIMAXResultsWrapper,
+    output_filepath: Path=Path('plot.png')):
+
+    simulations = model_result.simulate(
+        nsimulations=len(original_series), repetitions=50).squeeze()
+
+    plt.plot(simulations, alpha=0.1, color='green')
+    plt.plot(original_series, alpha=0.9, color='blue')
+
+    plt.title(
+        'Original series (blue), simulated values based on model (green)')
+    plt.axvline(x=len(model_result.fittedvalues), color='red', linestyle='--')
+    plt.tight_layout()
+
+    plt.savefig(output_filepath)
+    plt.clf()
+    plt.close()

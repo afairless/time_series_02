@@ -15,7 +15,6 @@ if __name__ == '__main__':
 
     from s01_generate_data import (
         expand_values_by_lengths_into_vector,
-        plot_time_series,
         )
 
     from common import (
@@ -23,12 +22,12 @@ if __name__ == '__main__':
         write_list_to_text_file,
         root_median_squared_error,
         plot_time_series_autocorrelation,
+        plot_time_series,
         )
 
 else:
     from src.s01_generate_data import (
         expand_values_by_lengths_into_vector,
-        plot_time_series,
         )
 
     from src.common import (
@@ -36,6 +35,7 @@ else:
         write_list_to_text_file,
         root_median_squared_error,
         plot_time_series_autocorrelation,
+        plot_time_series,
         )
 
 
