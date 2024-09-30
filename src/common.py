@@ -230,7 +230,7 @@ def get_git_root_path() -> Path | None:
 
 
 def write_list_to_text_file(
-    a_list: list[str], text_filename: Path | str, overwrite: bool=False):
+    a_list: list[Path | str], text_filename: Path | str, overwrite: bool=False):
     """
     Writes a list of strings to a text file
     If 'overwrite' is 'True', any existing file by the name of 'text_filename'

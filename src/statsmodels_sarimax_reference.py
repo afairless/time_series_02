@@ -12,8 +12,9 @@ import matplotlib.pyplot as plt
 import statsmodels.tsa.stattools as tsa_tools
 import statsmodels.tsa.statespace.sarimax as sarimax
 import statsmodels.graphics.tsaplots as tsa_plots
+# -
 
-
+# +
 def get_git_root_path() -> Path | None:
     """
     Returns the top-level project directory where the Git repository is defined
@@ -32,26 +33,34 @@ def get_git_root_path() -> Path | None:
         return None
 
 
+def is_notebook() -> bool:
+    """
+    Return 'True' if the code is running in a Jupyter notebook; otherwise 
+        return 'False'
+    """
+    try:
+        shell = get_ipython().__class__.__name__
+        if shell == 'ZMQInteractiveShell':
+            return True
+        else:
+            return False
+    except NameError:
+        return False
+
+
 project_root_path = get_git_root_path()
 assert isinstance(project_root_path, Path)
 os.chdir(project_root_path)
+# -
 
+# +
+if is_notebook():
+    from IPython.display import display, Image
+# - 
 
+# +
+# if __name__ == '__main__' and not is_notebook():
 if __name__ == '__main__':
-
-    from s01_generate_data import (
-        TimeSeriesParameters,
-        create_arma_coefficients,
-        create_time_series,
-        plot_time_series,
-        )
-
-    from common import (
-        # get_git_root_path,
-        plot_time_series_autocorrelation,
-        )
-
-else:
 
     from src.s01_generate_data import (
         TimeSeriesParameters,
@@ -63,6 +72,22 @@ else:
     from src.common import (
         # get_git_root_path,
         plot_time_series_autocorrelation,
+        write_list_to_text_file,
+        )
+
+else:
+
+    from s01_generate_data import (
+        TimeSeriesParameters,
+        create_arma_coefficients,
+        create_time_series,
+        plot_time_series,
+        )
+
+    from common import (
+        # get_git_root_path,
+        plot_time_series_autocorrelation,
+        write_list_to_text_file,
         )
 # -
 
@@ -175,7 +200,7 @@ ts_test = ts[test_start_idx:]
 
 # +
 # order = p, d, q | AR, difference, MA
-order = (0, 0, 1)
+order = (1, 0, 1)
 
 # seasonal_order = P, D, Q, period | AR, difference, MA, period
 # seasonal_order = (0, 0, 0, 1)
@@ -190,55 +215,248 @@ assert isinstance(model_1, sarimax.SARIMAXResultsWrapper)
 # +
 output_filepath = output_path / 'model_fit_and_forecast.png'
 plot_time_series_and_model_values(ts, model_1, output_filepath)
-output_filepath
-# -
 
-# +
-Path.cwd()
-# -
-
-# + [markdown]
-f'''
-Here is the image
-
-![image]({output_filepath._str})
-
-![image]('/media/gv/My Passport1/backup/data play/time_series/bernstein01/output/model01/sarima02/model_fit_and_forecast.png')
-
-![image]('./output/model01/sarima02/model_fit_and_forecast.png')
-
-![image]('/output/model01/sarima02/model_fit_and_forecast.png')
-
-![image]('model_fit_and_forecast.png')
-
-![image](./output/model01/sarima02/model_fit_and_forecast.png)
-
-![image](/output/model01/sarima02/model_fit_and_forecast.png)
-
-![image](model_fit_and_forecast.png)
-
-Here is the image
-'''
+if is_notebook():
+    display(Image(output_filepath._str))
 # - 
 
+# ## Autocorrelation
+
+# + [markdown]
+'''
+These are the "true" AR and MA parameters used to create the original series
+'''
+# - 
+# +
 coef_str = 'lag_polynomial_coefficients'
 for field in fields(ts_params):
     if coef_str in field.name:
         print(f"{field.name}: {getattr(ts_params, field.name)}")
+# - 
 
-output_filepath = output_path / 'time_series_season_diff_autocorr.png'
-ts_series_by_row = [ts_train_season_diff, fittedvalues_1, fittedvalues_2]
+# +
+output_filepath = output_path / 'original_series_and_model_fit_autocorr.png'
+ts_series_by_row = [ts[:len(model_1.fittedvalues)], model_1.fittedvalues]
 plot_time_series_autocorrelation(ts_series_by_row, output_filepath)
 
-dir(model_1)
-model_1._params_ar
-model_1._params_ma
-model_1._params_seasonal_ar
-model_1._params_seasonal_ma
-model_1.mse
-model_1.llf
-model_1.maroots
-model_1.seasonalarparams
-model_1.fixed_params
-model_1.get_smoothed_decomposition()
+if is_notebook():
+    display(Image(output_filepath._str))
+# -
 
+# ## Parameters
+
+# + [markdown]
+'''
+Parameters
+'''
+# +
+model_1.param_terms
+# - 
+# +
+model_1.params
+# - 
+# + [markdown]
+'''
+Standard errors of parameter estimates
+'''
+# +
+model_1.bse
+# -
+
+# +
+model_1.fixed_params
+# -
+
+# + [markdown]
+'''
+Fitted model AR and MA parameters
+'''
+# - 
+# +
+model_1.arparams
+# -
+# +
+model_1._params_ar
+# -
+# +
+model_1.maparams
+# -
+# +
+model_1._params_ma
+# -
+# +
+model_1.seasonalarparams
+# -
+# +
+model_1._params_seasonal_ar
+# -
+# +
+model_1.seasonalmaparams
+# -
+# +
+model_1._params_seasonal_ma
+# -
+
+# + [markdown]
+'''
+AR and MA roots
+'''
+# +
+model_1.arroots
+# -
+# +
+model_1.maroots
+# -
+
+# + [markdown]
+'''
+AR and MA root frequencies
+'''
+# +
+model_1.arfreq
+# -
+# +
+model_1.mafreq
+# -
+
+# + [markdown]
+'''
+Parameter hypothesis testing
+'''
+# +
+model_1.zvalues
+# -
+# +
+model_1.pvalues
+# -
+# +
+model_1.use_t
+# -
+# +
+model_1.tvalues
+# -
+
+# ## Metrics
+
+# + [markdown]
+'''
+Mean absolute error
+'''
+# +
+model_1.mae
+# -
+# +
+np.abs((ts[:len(model_1.fittedvalues)] - model_1.fittedvalues)).mean()
+# -
+
+# + [markdown]
+'''
+Mean squared error
+'''
+# +
+model_1.mse
+# -
+# +
+((ts[:len(model_1.fittedvalues)] - model_1.fittedvalues)**2).mean()
+# -
+
+# + [markdown]
+'''
+Summed squared error
+'''
+# +
+model_1.sse
+# -
+# +
+((ts[:len(model_1.fittedvalues)] - model_1.fittedvalues)**2).sum()
+# -
+
+# + [markdown]
+'''
+Akaike Information Criterion (AIC)
+'''
+# +
+model_1.aic
+# -
+
+# + [markdown]
+'''
+Akaike Information Criterion (AIC) with small sample correction
+'''
+# +
+model_1.aicc
+# -
+
+# + [markdown]
+'''
+Bayesian Information Criterion (BIC)
+'''
+# +
+model_1.bic
+# -
+
+# + [markdown]
+'''
+Hannan-Quinn Information Criterion (BIC)
+'''
+# +
+model_1.hqic
+# -
+
+# + [markdown]
+'''
+Log-Likelihood Function
+'''
+# +
+model_1.llf
+# -
+
+# + [markdown]
+'''
+Log-Likelihood Function at each observation
+'''
+# +
+len(model_1.llf_obs)
+# -
+# +
+model_1.llf_obs
+# -
+
+# ## Residuals`
+
+# + [markdown]
+'''
+Mean absolute error
+'''
+# +
+len(model_1.resid)
+# -
+# +
+model_1.resid
+# -
+
+# ## Covariance
+
+# +
+model_1.cov_params_approx
+# -
+# +
+model_1.cov_params_oim
+# -
+# +
+model_1.cov_params_opg
+# -
+# +
+model_1.cov_params_robust
+# -
+# +
+model_1.cov_params_robust_approx
+# -
+# +
+model_1.cov_params_robust_oim
+# -
+
+# +
+# model_1.get_smoothed_decomposition()
+# -
+# dir(model_1)
