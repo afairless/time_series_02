@@ -3,6 +3,7 @@
 import numpy as np
 import polars as pl
 from pathlib import Path
+from dataclasses import dataclass, fields
 
 import matplotlib.pyplot as plt
 
@@ -10,9 +11,27 @@ import statsmodels.tsa.stattools as tsa_tools
 import statsmodels.tsa.statespace.sarimax as sarimax
 import statsmodels.graphics.tsaplots as tsa_plots
 
+from sklearn.metrics import (
+    root_mean_squared_error as skl_rmse, 
+    mean_absolute_error as skl_mae, 
+    median_absolute_error as skl_mdae)
+
 
 if __name__ == '__main__':
 
+    from src.s01_generate_data import (
+        expand_values_by_lengths_into_vector,
+        )
+
+    from src.common import (
+        TimeSeriesDifferencing,
+        write_list_to_text_file,
+        root_median_squared_error,
+        plot_time_series_autocorrelation,
+        plot_time_series,
+        )
+
+else:
     from s01_generate_data import (
         expand_values_by_lengths_into_vector,
         )
@@ -25,18 +44,13 @@ if __name__ == '__main__':
         plot_time_series,
         )
 
-else:
-    from src.s01_generate_data import (
-        expand_values_by_lengths_into_vector,
-        )
 
-    from src.common import (
-        TimeSeriesDifferencing,
-        write_list_to_text_file,
-        root_median_squared_error,
-        plot_time_series_autocorrelation,
-        plot_time_series,
-        )
+@dataclass
+class TimeSeriesMetrics:
+    rmse: float
+    rmdse: float
+    mae: float
+    mdae: float
 
 
 def extract_trend_from_time_series_dataframe(
@@ -56,6 +70,22 @@ def extract_trend_from_time_series_dataframe(
     trend = np.array(trend_slopes_extended).cumsum()
 
     return trend
+
+
+def calculate_time_series_metrics(
+    series_1: np.ndarray, series_2: np.ndarray) -> TimeSeriesMetrics:
+    """
+    Calculate basic error metrics for two time series
+    """
+
+    rmse = skl_rmse(series_1, series_2).item()
+    rmdse = root_median_squared_error(series_1, series_2).item()
+    mae = skl_mae(series_1, series_2).item()
+    mdae = skl_mdae(series_1, series_2).item()
+
+    metrics = TimeSeriesMetrics(rmse, rmdse, mae, mdae)
+
+    return metrics
 
 
 def stationarity_tests(
@@ -872,7 +902,7 @@ def main():
         ts_train, k_diff=0, k_seasonal_diff=1, seasonal_periods=6)
 
 
-    # model 2
+    # model 1
     ##################################################
     # p, d, q = 0, 0, 1 
     order = (0, 0, 1)
@@ -881,23 +911,23 @@ def main():
     # seasonal, AR = 1, D = 1, MA = 0
     seasonal_order = (1, 1, 0, season_period)
 
-    model_2 = sarimax.SARIMAX(
+    model_1 = sarimax.SARIMAX(
         ts_train_season_diff, order=order, seasonal_order=seasonal_order).fit()
-    assert isinstance(model_2, sarimax.SARIMAXResultsWrapper)
-    fittedvalues_2 = model_2.fittedvalues
+    assert isinstance(model_1, sarimax.SARIMAXResultsWrapper)
+    fitted_values_1 = model_1.fittedvalues
+    forecast_values_1 = model_1.forecast(steps=len(ts_test))
 
-    dir(model_2)
-    model_2._params_ar
-    model_2._params_ma
-    model_2._params_seasonal_ar
-    model_2._params_seasonal_ma
-    model_2.mse
-    model_2.llf
-    model_2.maroots
-    model_2.seasonalarparams
-    model_2.fixed_params
-    model_2.get_smoothed_decomposition()
-    ts_pred = model_2.forecast(steps=len(ts_test))
+    len_diff = len(ts_train_season_diff) - len(fitted_values_1)
+    train_metrics = calculate_time_series_metrics(
+        ts_train_season_diff[len_diff:], fitted_values_1)
+    assert train_metrics.rmse == np.sqrt(model_1.mse)
+    assert train_metrics.mae == model_1.mae
+    test_metrics = calculate_time_series_metrics(
+        ts_test, forecast_values_1)
+
+
+    dir(model_1)
+    print('\n')
 
     output_filepath = output_path / 'time_series_predictions.png'
     plt.plot(ts_train_season_diff, alpha=0.5, color='blue')
@@ -918,8 +948,6 @@ if __name__ == '__main__':
     # metrics:  RMSE, MAE, RMdSE, MdAE, 
     #   plus those 4 relative to benchmark (probably naive and seasonal naive) 
     #   maybe also relative to in-sample, i.e., scaled errors
-
-    # notebook as reference for statsmodels attributes
 
     # sklearn
     # statsmodels
