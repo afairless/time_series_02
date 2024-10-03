@@ -10,6 +10,11 @@ import matplotlib.pyplot as plt
 import statsmodels.graphics.tsaplots as tsa_plots
 import statsmodels.tsa.statespace.sarimax as sarimax
 
+from sklearn.metrics import (
+    root_mean_squared_error as skl_rmse, 
+    mean_absolute_error as skl_mae, 
+    median_absolute_error as skl_mdae)
+
 
 @dataclass
 class TimeSeriesDifferencing:
@@ -171,8 +176,6 @@ class TimeSeriesDifferencing:
 
         # DE-DIFFERENCE TIME SERIES
         ##################################################
-        # there's probably an elegant recursive algorithm for this
-        ##################################################
 
         # if the given series is the final difference vector, pass original
         #   difference vector along as the combined vector
@@ -262,8 +265,36 @@ def convert_path_to_relative_path_str(path: Path) -> str:
     return str(path).replace(str(Path.cwd()), '.')
 
 
+##################################################
+# TIME SERIES METRICS
+##################################################
+
 def root_median_squared_error(y_true, y_pred):
     return np.sqrt(np.median((y_true - y_pred) ** 2))
+
+
+@dataclass
+class TimeSeriesMetrics:
+    rmse: float
+    rmdse: float
+    mae: float
+    mdae: float
+
+
+def calculate_time_series_metrics(
+    series_1: np.ndarray, series_2: np.ndarray) -> TimeSeriesMetrics:
+    """
+    Calculate basic error metrics for two time series
+    """
+
+    rmse = skl_rmse(series_1, series_2).item()
+    rmdse = root_median_squared_error(series_1, series_2).item()
+    mae = skl_mae(series_1, series_2).item()
+    mdae = skl_mdae(series_1, series_2).item()
+
+    metrics = TimeSeriesMetrics(rmse, rmdse, mae, mdae)
+
+    return metrics
 
 
 ##################################################

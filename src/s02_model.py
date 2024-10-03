@@ -11,11 +11,6 @@ import statsmodels.tsa.stattools as tsa_tools
 import statsmodels.tsa.statespace.sarimax as sarimax
 import statsmodels.graphics.tsaplots as tsa_plots
 
-from sklearn.metrics import (
-    root_mean_squared_error as skl_rmse, 
-    mean_absolute_error as skl_mae, 
-    median_absolute_error as skl_mdae)
-
 
 if __name__ == '__main__':
 
@@ -26,7 +21,7 @@ if __name__ == '__main__':
     from src.common import (
         TimeSeriesDifferencing,
         write_list_to_text_file,
-        root_median_squared_error,
+        calculate_time_series_metrics,
         plot_time_series_autocorrelation,
         plot_time_series,
         )
@@ -39,18 +34,10 @@ else:
     from common import (
         TimeSeriesDifferencing,
         write_list_to_text_file,
-        root_median_squared_error,
+        calculate_time_series_metrics,
         plot_time_series_autocorrelation,
         plot_time_series,
         )
-
-
-@dataclass
-class TimeSeriesMetrics:
-    rmse: float
-    rmdse: float
-    mae: float
-    mdae: float
 
 
 def extract_trend_from_time_series_dataframe(
@@ -70,22 +57,6 @@ def extract_trend_from_time_series_dataframe(
     trend = np.array(trend_slopes_extended).cumsum()
 
     return trend
-
-
-def calculate_time_series_metrics(
-    series_1: np.ndarray, series_2: np.ndarray) -> TimeSeriesMetrics:
-    """
-    Calculate basic error metrics for two time series
-    """
-
-    rmse = skl_rmse(series_1, series_2).item()
-    rmdse = root_median_squared_error(series_1, series_2).item()
-    mae = skl_mae(series_1, series_2).item()
-    mdae = skl_mdae(series_1, series_2).item()
-
-    metrics = TimeSeriesMetrics(rmse, rmdse, mae, mdae)
-
-    return metrics
 
 
 def stationarity_tests(
@@ -478,7 +449,7 @@ def exploratory02():
     output_path = input_path / 'model01' / 'differencing01'
     output_path.mkdir(exist_ok=True, parents=True)
 
-    md_filepath = output_path / 'differencing01.md'
+    md_filepath = output_path / 'differencing.md'
     md = []
 
 
@@ -544,7 +515,7 @@ def exploratory03():
     output_path = input_path / 'model01' / 'differencing02'
     output_path.mkdir(exist_ok=True, parents=True)
 
-    md_filepath = output_path / 'differencing02.md'
+    md_filepath = output_path / 'differencing.md'
     md = []
 
 
@@ -632,7 +603,7 @@ def exploratory04():
     output_path = input_path / 'model01' / 'differencing03'
     output_path.mkdir(exist_ok=True, parents=True)
 
-    md_filepath = output_path / 'differencing03.md'
+    md_filepath = output_path / 'differencing.md'
     md = []
 
 
@@ -742,7 +713,7 @@ def exploratory05():
     output_path = input_path / 'model01' / 'differencing04'
     output_path.mkdir(exist_ok=True, parents=True)
 
-    md_filepath = output_path / 'differencing04.md'
+    md_filepath = output_path / 'differencing.md'
     md = []
 
 
@@ -757,9 +728,13 @@ def exploratory05():
 
     # ts_train_season_diff = sarimax.diff(
     #     ts_train, k_diff=0, k_seasonal_diff=1, seasonal_periods=6)
-    ts_diff = TimeSeriesDifferencing(
+    ts_diff_1 = TimeSeriesDifferencing(
         k_diff=0, k_seasonal_diff=1, seasonal_periods=6)
-    ts_train_season_diff = ts_diff.difference_time_series(ts_train)
+    ts_train_season_diff_1 = ts_diff_1.difference_time_series(ts_train)
+
+    ts_diff_2 = TimeSeriesDifferencing(
+        k_diff=0, k_seasonal_diff=1, seasonal_periods=6)
+    ts_train_season_diff_2 = ts_diff_2.difference_time_series(ts_train)
 
 
     # model 1
@@ -771,7 +746,7 @@ def exploratory05():
     seasonal_order = (1, 1, 0, season_period)
 
     model_1 = sarimax.SARIMAX(
-        ts_train_season_diff, order=order, seasonal_order=seasonal_order).fit()
+        ts_train_season_diff_1, order=order, seasonal_order=seasonal_order).fit()
     assert isinstance(model_1, sarimax.SARIMAXResultsWrapper)
     fittedvalues_1 = model_1.fittedvalues
 
@@ -786,7 +761,7 @@ def exploratory05():
     seasonal_order = (1, 1, 0, season_period)
 
     model_2 = sarimax.SARIMAX(
-        ts_train_season_diff, order=order, seasonal_order=seasonal_order).fit()
+        ts_train_season_diff_2, order=order, seasonal_order=seasonal_order).fit()
     assert isinstance(model_2, sarimax.SARIMAXResultsWrapper)
     fittedvalues_2 = model_2.fittedvalues
 
@@ -795,7 +770,7 @@ def exploratory05():
     md.append('\n')
 
     output_filepath = output_path / 'time_series_season_diff.png'
-    plt.plot(ts_train_season_diff, alpha=0.5, color='blue')
+    plt.plot(ts_train_season_diff_1, alpha=0.5, color='blue')
     plt.plot(fittedvalues_1, alpha=0.5, color='green')
     plt.plot(fittedvalues_2, alpha=0.5, color='orange')
     plt.title('Time series and seasonal differencing')
@@ -813,7 +788,7 @@ def exploratory05():
     md.append('\n')
 
     output_filepath = output_path / 'time_series_season_diff_autocorr.png'
-    ts_series_by_row = [ts_train_season_diff, fittedvalues_1, fittedvalues_2]
+    ts_series_by_row = [ts_train_season_diff_1, fittedvalues_1, fittedvalues_2]
     plot_time_series_autocorrelation(ts_series_by_row, output_filepath)
 
     md.append(
@@ -840,8 +815,8 @@ def exploratory05():
     md.append('\n')
 
     output_filepath = output_path / 'time_series_season_dediff.png'
-    fittedvalues_dediff_1 = ts_diff.de_difference_time_series(fittedvalues_1)
-    fittedvalues_dediff_2 = ts_diff.de_difference_time_series(fittedvalues_2)
+    fittedvalues_dediff_1 = ts_diff_1.de_difference_time_series(fittedvalues_1)
+    fittedvalues_dediff_2 = ts_diff_2.de_difference_time_series(fittedvalues_2)
     plt.plot(ts_train, alpha=0.5, color='blue')
     plt.plot(fittedvalues_dediff_1, alpha=0.5, color='green')
     plt.plot(fittedvalues_dediff_2, alpha=0.5, color='orange')
@@ -850,6 +825,328 @@ def exploratory05():
     plt.savefig(output_filepath)
     plt.clf()
     plt.close()
+    
+    # save series to external file to check results against R
+    ts_train_season_diff_1_padded = np.append(
+        np.zeros(season_period), ts_train_season_diff_1)
+    fittedvalues_1_padded = np.append(np.zeros(season_period), fittedvalues_1)
+    fittedvalues_2_padded = np.append(np.zeros(season_period), fittedvalues_2)
+    srs_arr = np.vstack(
+        [ts_train, 
+         ts_train_season_diff_1_padded, 
+         fittedvalues_1_padded, 
+         fittedvalues_2_padded, 
+         fittedvalues_dediff_1, 
+         fittedvalues_dediff_2])
+    colnames = [
+        'ts_train', 'ts_train_season_diff_1_padded', 
+        'fittedvalues_1', 'fittedvalues_2', 
+        'fittedvalues_dediff_1', 'fittedvalues_dediff_2']
+    srs_df = pl.DataFrame(srs_arr.T)
+    srs_df.columns = colnames
+    output_filepath = output_path / 'original_and_dediff.parquet'
+    srs_df.write_parquet(output_filepath)
+    output_filepath = output_path / 'original_and_dediff.csv'
+    srs_df.write_csv(output_filepath)
+
+    md.append(
+        'Original time series (blue), and de-differenced fitted values from '
+        'SARIMAX model with p, d, q = 0, 0, 0 and P, D, Q = 1, 1, 0 '
+        '(Series #1)')
+    md.append(
+        'Original time series with seasonal differencing only (blue), and '
+        'de-differenced fitted values from SARIMAX model with p, d, q = 0, 0, 0 '
+        ' and P, D, Q = 1, 1, 0 (green), and with p, d, q = 0, 0, 1 and '
+        'P, D, Q = 1, 1, 0 (orange)')
+    md.append('\n')
+    md.append('![Image](' + output_filepath.name + '){width=1024}')
+    md.append('\n')
+
+    write_list_to_text_file(md, md_filepath, True)
+
+
+def exploratory06():
+
+    input_path = Path.cwd() / 'output'
+    input_filepath = input_path / f'time_series.parquet'
+    df = pl.read_parquet(input_filepath)
+
+    output_path = input_path / 'model01' / 'differencing05'
+    output_path.mkdir(exist_ok=True, parents=True)
+
+    md_filepath = output_path / 'differencing.md'
+    md = []
+
+
+    row_idx = 0
+
+    train_len = int(df[row_idx, 'time_n'] * 0.6)
+    test_start_idx = train_len
+
+    ts_colnames = [e for e in df.columns if e[:3] == 'ts_']
+    ts = df[row_idx, ts_colnames].to_numpy().reshape(-1)
+    ts_train = ts[:test_start_idx]
+
+    # ts_train_season_diff = sarimax.diff(
+    #     ts_train, k_diff=0, k_seasonal_diff=1, seasonal_periods=6)
+    ts_diff_1 = TimeSeriesDifferencing(
+        k_diff=0, k_seasonal_diff=1, seasonal_periods=6)
+    ts_train_season_diff_1 = ts_diff_1.difference_time_series(ts_train)
+
+    ts_diff_2 = TimeSeriesDifferencing(
+        k_diff=0, k_seasonal_diff=1, seasonal_periods=6)
+    ts_train_season_diff_2 = ts_diff_2.difference_time_series(ts_train)
+
+
+    # model 1
+    ##################################################
+    order = (0, 0, 0)
+    season_period = df[0, 'season_period']
+    assert season_period == 6
+    # seasonal, AR = 1, D = 0, MA = 0
+    seasonal_order = (1, 0, 0, season_period)
+
+    model_1 = sarimax.SARIMAX(
+        ts_train_season_diff_1, order=order, seasonal_order=seasonal_order).fit()
+    assert isinstance(model_1, sarimax.SARIMAXResultsWrapper)
+    fittedvalues_1 = model_1.fittedvalues
+
+
+    # model 2
+    ##################################################
+    # p, d, q = 0, 0, 1 
+    order = (0, 0, 1)
+    season_period = df[0, 'season_period']
+    assert season_period == 6
+    # seasonal, AR = 1, D = 0, MA = 0
+    seasonal_order = (1, 0, 0, season_period)
+
+    model_2 = sarimax.SARIMAX(
+        ts_train_season_diff_2, order=order, seasonal_order=seasonal_order).fit()
+    assert isinstance(model_2, sarimax.SARIMAXResultsWrapper)
+    fittedvalues_2 = model_2.fittedvalues
+
+
+    md.append('# Looking at model fit on differenced time series')
+    md.append('\n')
+
+    output_filepath = output_path / 'time_series_season_diff.png'
+    plt.plot(ts_train_season_diff_1, alpha=0.5, color='blue')
+    plt.plot(fittedvalues_1, alpha=0.5, color='green')
+    plt.plot(fittedvalues_2, alpha=0.5, color='orange')
+    plt.title('Time series and seasonal differencing')
+    plt.tight_layout()
+    plt.savefig(output_filepath)
+    plt.clf()
+    plt.close()
+
+    md.append(
+        'Time series with seasonal differencing only (blue), and fitted values '
+        'from SARIMAX model with p, d, q = 0, 0, 0 and P, D, Q = 1, 1, 0 '
+        '(green), and with p, d, q = 0, 0, 1 and P, D, Q = 1, 1, 0 (orange)')
+    md.append('\n')
+    md.append('![Image](' + output_filepath.name + '){width=1024}')
+    md.append('\n')
+
+    output_filepath = output_path / 'time_series_season_diff_autocorr.png'
+    ts_series_by_row = [ts_train_season_diff_1, fittedvalues_1, fittedvalues_2]
+    plot_time_series_autocorrelation(ts_series_by_row, output_filepath)
+
+    md.append(
+        'Time series with seasonal differencing only (Series #0), and fitted '
+        'values from SARIMAX model with p, d, q = 0, 0, 0 and P, D, Q = 1, 1, 0 '
+        '(Series #1), and with p, d, q = 0, 0, 1 and P, D, Q = 1, 1, 0 (Series '
+        '#2)')
+    md.append('\n')
+    md.append('![Image](' + output_filepath.name + '){width=1024}')
+    md.append('\n')
+
+    md.append(
+        'Adding the non-seasonal MA = 1 term made the ACF and PACF spikes at 1 '
+        'smaller and reversed their direction, but it magnified spikes at 6 '
+        'and 11, especially on the PACF. ')
+    md.append('\n')
+
+    md.append(
+        'Also, the variability of the fitted values for both models is much '
+        'smaller than for the differenced series, suggesting that a more '
+        'complex model would be needed -- a conclusion supported by the small, '
+        'persisting spikes in the ACF and PACF and by the parameters by which '
+        'I created the synthetic data.')
+    md.append('\n')
+
+    output_filepath = output_path / 'time_series_season_dediff.png'
+    fittedvalues_dediff_1 = ts_diff_1.de_difference_time_series(fittedvalues_1)
+    fittedvalues_dediff_2 = ts_diff_2.de_difference_time_series(fittedvalues_2)
+    plt.plot(ts_train, alpha=0.5, color='blue')
+    plt.plot(fittedvalues_dediff_1, alpha=0.5, color='green')
+    plt.plot(fittedvalues_dediff_2, alpha=0.5, color='orange')
+    plt.title('Time series, with de-differencing')
+    plt.tight_layout()
+    plt.savefig(output_filepath)
+    plt.clf()
+    plt.close()
+    
+    # save series to external file to check results against R
+    ts_train_season_diff_1_padded = np.append(
+        np.zeros(season_period), ts_train_season_diff_1)
+    fittedvalues_1_padded = np.append(np.zeros(season_period), fittedvalues_1)
+    fittedvalues_2_padded = np.append(np.zeros(season_period), fittedvalues_2)
+    srs_arr = np.vstack(
+        [ts_train, 
+         ts_train_season_diff_1_padded, 
+         fittedvalues_1_padded, 
+         fittedvalues_2_padded, 
+         fittedvalues_dediff_1, 
+         fittedvalues_dediff_2])
+    colnames = [
+        'ts_train', 'ts_train_season_diff_1_padded', 
+        'fittedvalues_1', 'fittedvalues_2', 
+        'fittedvalues_dediff_1', 'fittedvalues_dediff_2']
+    srs_df = pl.DataFrame(srs_arr.T)
+    srs_df.columns = colnames
+    output_filepath = output_path / 'original_and_dediff.parquet'
+    srs_df.write_parquet(output_filepath)
+    output_filepath = output_path / 'original_and_dediff.csv'
+    srs_df.write_csv(output_filepath)
+
+    md.append(
+        'Original time series (blue), and de-differenced fitted values from '
+        'SARIMAX model with p, d, q = 0, 0, 0 and P, D, Q = 1, 1, 0 '
+        '(Series #1)')
+    md.append(
+        'Original time series with seasonal differencing only (blue), and '
+        'de-differenced fitted values from SARIMAX model with p, d, q = 0, 0, 0 '
+        ' and P, D, Q = 1, 1, 0 (green), and with p, d, q = 0, 0, 1 and '
+        'P, D, Q = 1, 1, 0 (orange)')
+    md.append('\n')
+    md.append('![Image](' + output_filepath.name + '){width=1024}')
+    md.append('\n')
+
+    write_list_to_text_file(md, md_filepath, True)
+
+
+def exploratory07():
+    """
+    This is just checking/verifying that fitting
+    """
+
+    input_path = Path.cwd() / 'output'
+    input_filepath = input_path / f'time_series.parquet'
+    df = pl.read_parquet(input_filepath)
+
+    output_path = input_path / 'model01' / 'differencing06'
+    output_path.mkdir(exist_ok=True, parents=True)
+
+    md_filepath = output_path / 'differencing.md'
+    md = []
+
+
+    row_idx = 0
+
+    train_len = int(df[row_idx, 'time_n'] * 0.6)
+    test_start_idx = train_len
+
+    ts_colnames = [e for e in df.columns if e[:3] == 'ts_']
+    ts = df[row_idx, ts_colnames].to_numpy().reshape(-1)
+    ts_train = ts[:test_start_idx]
+
+
+    # model 1
+    ##################################################
+    order = (0, 0, 0)
+    season_period = df[0, 'season_period']
+    assert season_period == 6
+    # seasonal, AR = 1, D = 1, MA = 0
+    seasonal_order = (1, 1, 0, season_period)
+
+    model_1 = sarimax.SARIMAX(
+        ts_train, order=order, seasonal_order=seasonal_order).fit()
+    assert isinstance(model_1, sarimax.SARIMAXResultsWrapper)
+    fittedvalues_1 = model_1.fittedvalues
+
+
+    # model 2
+    ##################################################
+    # p, d, q = 0, 0, 1 
+    order = (0, 0, 1)
+    season_period = df[0, 'season_period']
+    assert season_period == 6
+    # seasonal, AR = 1, D = 1, MA = 0
+    seasonal_order = (1, 1, 0, season_period)
+
+    model_2 = sarimax.SARIMAX(
+        ts_train, order=order, seasonal_order=seasonal_order).fit()
+    assert isinstance(model_2, sarimax.SARIMAXResultsWrapper)
+    fittedvalues_2 = model_2.fittedvalues
+
+
+    md.append('# Looking at model fit on differenced time series')
+    md.append('\n')
+
+    output_filepath = output_path / 'time_series_season_diff.png'
+    plt.plot(ts_train, alpha=0.5, color='blue')
+    plt.plot(fittedvalues_1, alpha=0.5, color='green')
+    plt.plot(fittedvalues_2, alpha=0.5, color='orange')
+    plt.title('Time series and seasonal differencing')
+    plt.tight_layout()
+    plt.savefig(output_filepath)
+    plt.clf()
+    plt.close()
+
+    md.append(
+        'Time series with seasonal differencing only (blue), and fitted values '
+        'from SARIMAX model with p, d, q = 0, 0, 0 and P, D, Q = 1, 1, 0 '
+        '(green), and with p, d, q = 0, 0, 1 and P, D, Q = 1, 1, 0 (orange)')
+    md.append('\n')
+    md.append('![Image](' + output_filepath.name + '){width=1024}')
+    md.append('\n')
+
+    output_filepath = output_path / 'time_series_season_diff_autocorr.png'
+    ts_series_by_row = [ts_train, fittedvalues_1, fittedvalues_2]
+    plot_time_series_autocorrelation(ts_series_by_row, output_filepath)
+
+    md.append(
+        'Time series with seasonal differencing only (Series #0), and fitted '
+        'values from SARIMAX model with p, d, q = 0, 0, 0 and P, D, Q = 1, 1, 0 '
+        '(Series #1), and with p, d, q = 0, 0, 1 and P, D, Q = 1, 1, 0 (Series '
+        '#2)')
+    md.append('\n')
+    md.append('![Image](' + output_filepath.name + '){width=1024}')
+    md.append('\n')
+
+    md.append(
+        'Adding the non-seasonal MA = 1 term made the ACF and PACF spikes at 1 '
+        'smaller and reversed their direction, but it magnified spikes at 6 '
+        'and 11, especially on the PACF. ')
+    md.append('\n')
+
+    md.append(
+        'Also, the variability of the fitted values for both models is much '
+        'smaller than for the differenced series, suggesting that a more '
+        'complex model would be needed -- a conclusion supported by the small, '
+        'persisting spikes in the ACF and PACF and by the parameters by which '
+        'I created the synthetic data.')
+    md.append('\n')
+
+    output_filepath = output_path / 'time_series_season_dediff.png'
+    plt.plot(ts_train, alpha=0.5, color='blue')
+    plt.plot(fittedvalues_1, alpha=0.5, color='green')
+    plt.plot(fittedvalues_2, alpha=0.5, color='orange')
+    plt.title('Time series, with de-differencing')
+    plt.tight_layout()
+    plt.savefig(output_filepath)
+    plt.clf()
+    plt.close()
+
+    srs_arr = np.vstack([ts_train, fittedvalues_1, fittedvalues_2])
+    colnames = ['ts_train', 'fittedvalues_1', 'fittedvalues_2']
+    srs_df = pl.DataFrame(srs_arr.T)
+    srs_df.columns = colnames
+    output_filepath = output_path / 'original_and_dediff.parquet'
+    srs_df.write_parquet(output_filepath)
+    output_filepath = output_path / 'original_and_dediff.csv'
+    srs_df.write_csv(output_filepath)
 
     md.append(
         'Original time series (blue), and de-differenced fitted values from '
@@ -929,6 +1226,7 @@ def main():
     dir(model_1)
     print('\n')
 
+
     output_filepath = output_path / 'time_series_predictions.png'
     plt.plot(ts_train_season_diff, alpha=0.5, color='blue')
     plt.plot(ts_test, alpha=0.5, color='green')
@@ -958,4 +1256,31 @@ if __name__ == '__main__':
     exploratory02()
     exploratory03()
     exploratory04()
+
+    # 'exploratory05' uses seasonal D = 1 with manual differencing and 
+    #   de-differencing ('manual', i.e., outside of the model-fitting library),
+    #   and this is clearly incorrect; de-differencing exaggerates the 
+    #   variability, both for the trend and the season
     exploratory05()
+
+    # 'exploratory06' uses seasonal D = 0 with manual differencing and the 
+    #   results look plausible
+    exploratory06()
+
+    # 'exploratory07' uses seasonal D = 1 with no manual differencing and the 
+    #   results look terrific; for some reason, my manual differencing-
+    #   dedifferencing in 'exploratory06' doesn't reproduce these results; I 
+    #   read something online suggesting that the commonly used R ARIMA package 
+    #   does some estimating that my manual de-differencing doesn't do (I simply 
+    #   copy over the first few elements of the original data and then 
+    #   de-difference); however, examining the first few values from 
+    #   'exploratory07' doesn't make clear what's happening, as they're mostly
+    #   near (but not equal to) zero
+    # pro:  I understand the best way to fit data that needs differencing in
+    #   SARIMAX, which I think is consistent with R's ARIMA
+    # con:  I can't (even approximately) reproduce the results with my manual 
+    #   differencing-dedifferencing process
+    # NOTE:  I checked my Python differencing-dedifferencing against the 
+    #   corresponding R functions, and they provide identical results, so if I
+    #   have a mistake somewhere, it's conceptual -- not in the calculations
+    exploratory07()
