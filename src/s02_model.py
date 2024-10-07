@@ -1,7 +1,6 @@
 #! /usr/bin/env python3
 
 import numpy as np
-import pandas as pd
 import polars as pl
 from pathlib import Path
 from dataclasses import dataclass, fields
@@ -1215,8 +1214,6 @@ def exploratory08():
     fittedvalues_1 = model_1.fittedvalues
 
     output_filepath = output_path / 'decomposition.png'
-    # test_forecast_seasonal_naive = decompose_and_forecast_seasonal_naive(
-    #     ts, test_start_idx, season_period, True, True, output_filepath)
     forecast_df, metrics_df = calculate_forecasts_and_metrics(
         ts, test_start_idx, model_1, season_period, True, True, output_filepath)
     output_filepath = output_path / 'metrics.csv'
@@ -1226,6 +1223,7 @@ def exploratory08():
     output_filepath = output_path / 'original_and_predictions.png'
     plot_time_series_and_model_values_2(ts, model_1, output_filepath)
 
+    output_filepath = output_path / 'original_and_forecasts.png'
     title = 'Time series and naive, seasonal naive, and model forecasts'
     original_and_forecasts = np.vstack([ts_test, forecast_df.values.T])
     original_and_forecasts = original_and_forecasts[[0, 3, 1, 2], :]
@@ -1235,6 +1233,14 @@ def exploratory08():
 
 
     ##################################################
+    arr = np.vstack([ts_test, forecast_df.values.T])
+    diff_arr = arr[1:, :] - arr[0, :]
+    title = 'Forecasts minus original time series'
+    output_filepath = output_path / 'original_minus_forecasts.png'
+    plot_time_series(
+        diff_arr, diff_arr.shape[0], title, output_filepath)
+
+
     md.append('# Looking at model fit on differenced time series')
     md.append('\n')
 

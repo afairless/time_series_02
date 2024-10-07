@@ -307,8 +307,8 @@ def is_array_one_dimensional(arr: np.ndarray) -> bool:
 
 
 def decompose_and_forecast_seasonal_naive(
-    time_series: np.ndarray, test_start_idx: int, period: int, 
-    decompose_additive: bool, plot_decomposition: bool=False,
+    time_series: np.ndarray, test_start_idx: int, last_observation: float,
+    period: int, decompose_additive: bool, plot_decomposition: bool=False,
     output_filepath: Path=Path('plot.png')) -> np.ndarray:
     """
     Produce seasonal naive forecast by decomposing the time series into trend
@@ -316,6 +316,9 @@ def decompose_and_forecast_seasonal_naive(
 
     time_series - a 1-dimensional array representing the time series
     test_start_idx - the index of the time series at which the test set starts
+    last_fit_observation - the last observation before the start of the forecast
+        time range; it serves as a constant level for the seasonal naive 
+        forecast
     period - the period of the seasonal component
     decompose_additive - whether to decompose the time series using an additive 
         model ('True') or a multiplicative model ('False')
@@ -344,8 +347,9 @@ def decompose_and_forecast_seasonal_naive(
     decomposition = seasonal_decompose(
         time_series, model=decompose_model, period=period, two_sided=False)
 
+    time_series[test_start_idx-5:test_start_idx+5]
     test_forecast_seasonal_naive = np.add(
-        decomposition.trend[test_start_idx:], 
+        last_observation,
         decomposition.seasonal[test_start_idx:])
 
     # replace NaNs with last observation carried forward
@@ -418,8 +422,8 @@ def calculate_forecasts_and_metrics(
     test_forecast_model = model_result.forecast(steps=len(test_series))
     test_forecast_naive = np.repeat(fittedvalues[-1], len(test_series))
     test_forecast_seasonal_naive = decompose_and_forecast_seasonal_naive(
-        time_series, test_start_idx, period, decompose_additive, 
-        plot_decomposition, decomposition_plot_filepath)
+        time_series, test_start_idx, fittedvalues[-1], period, 
+        decompose_additive, plot_decomposition, decomposition_plot_filepath)
 
     forecast_df = pd.DataFrame({
         'naive_forecast': test_forecast_naive,
