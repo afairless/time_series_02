@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 
 import statsmodels.graphics.tsaplots as tsa_plots
 import statsmodels.tsa.statespace.sarimax as sarimax
+from statsmodels.tsa.seasonal import seasonal_decompose
 
 from sklearn.metrics import (
     root_mean_squared_error as skl_rmse, 
@@ -295,6 +296,39 @@ def calculate_time_series_metrics(
     metrics = TimeSeriesMetrics(rmse, rmdse, mae, mdae)
 
     return metrics
+
+
+def decompose_and_forecast_seasonal_naive(
+    time_series: np.ndarray, test_start_idx: int, period: int, 
+    decompose_additive: bool, plot_decomposition: bool=False,
+    output_filepath: Path=Path('plot.png'),
+    ) -> np.ndarray:
+
+    if decompose_additive:
+        decompose_model = 'additive'
+    else:
+        decompose_model = 'multiplicative'
+
+    decomposition = seasonal_decompose(
+        time_series, model=decompose_model, period=period, two_sided=False)
+
+    test_forecast_seasonal_naive = np.add(
+        decomposition.trend[test_start_idx:], 
+        decomposition.seasonal[test_start_idx:])
+
+    # replace NaNs with last observation carried forward
+    nan_mask = np.isnan(test_forecast_seasonal_naive)
+    for idx in np.where(nan_mask)[0]:
+        test_forecast_seasonal_naive[idx] = test_forecast_seasonal_naive[idx-1]
+
+    if plot_decomposition:
+        _ = decomposition.plot()
+        plt.tight_layout()
+        plt.savefig(output_filepath)
+        plt.clf()
+        plt.close()
+
+    return test_forecast_seasonal_naive
 
 
 ##################################################

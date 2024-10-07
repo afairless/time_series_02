@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 import statsmodels.tsa.stattools as tsa_tools
 import statsmodels.tsa.statespace.sarimax as sarimax
 import statsmodels.graphics.tsaplots as tsa_plots
+from statsmodels.tsa.seasonal import seasonal_decompose
 
 
 if __name__ == '__main__':
@@ -21,9 +22,11 @@ if __name__ == '__main__':
     from src.common import (
         TimeSeriesDifferencing,
         write_list_to_text_file,
+        decompose_and_forecast_seasonal_naive,
         calculate_time_series_metrics,
-        plot_time_series_autocorrelation,
         plot_time_series,
+        plot_time_series_autocorrelation,
+        plot_time_series_and_model_values_2,
         )
 
 else:
@@ -34,9 +37,11 @@ else:
     from common import (
         TimeSeriesDifferencing,
         write_list_to_text_file,
+        decompose_and_forecast_seasonal_naive,
         calculate_time_series_metrics,
-        plot_time_series_autocorrelation,
         plot_time_series,
+        plot_time_series_autocorrelation,
+        plot_time_series_and_model_values_2,
         )
 
 
@@ -1164,6 +1169,150 @@ def exploratory07():
     write_list_to_text_file(md, md_filepath, True)
 
 
+def exploratory08():
+    """
+    This is just checking/verifying that fitting
+    """
+
+    plt.rcParams.update({'figure.figsize': (16, 10)})
+
+    input_path = Path.cwd() / 'output'
+    input_filepath = input_path / f'time_series.parquet'
+    df = pl.read_parquet(input_filepath)
+
+    output_path = input_path / 'model01' / 'differencing07'
+    output_path.mkdir(exist_ok=True, parents=True)
+
+    md_filepath = output_path / 'differencing.md'
+    md = []
+
+
+    row_idx = 0
+
+    train_len = int(df[row_idx, 'time_n'] * 0.6)
+    test_start_idx = train_len
+
+    ts_colnames = [e for e in df.columns if e[:3] == 'ts_']
+    ts = df[row_idx, ts_colnames].to_numpy().reshape(-1)
+    ts_train = ts[:test_start_idx]
+    ts_test = ts[test_start_idx:]
+
+
+    # model 1
+    ##################################################
+    order = (0, 0, 0)
+    season_period = df[0, 'season_period']
+    assert season_period == 6
+    # seasonal, AR = 1, D = 1, MA = 0
+    seasonal_order = (1, 1, 0, season_period)
+
+    model_1 = sarimax.SARIMAX(
+        ts_train, order=order, seasonal_order=seasonal_order).fit()
+    assert isinstance(model_1, sarimax.SARIMAXResultsWrapper)
+    fittedvalues_1 = model_1.fittedvalues
+
+    output_filepath = output_path / 'decomposition.png'
+    test_forecast_seasonal_naive = decompose_and_forecast_seasonal_naive(
+        ts, test_start_idx, season_period, True, True, output_filepath)
+
+    output_filepath = output_path / 'original_vs_seasonal_naive_forecast.png'
+    plt.plot(ts_test, alpha=0.5, color='blue')
+    plt.plot(test_forecast_seasonal_naive, alpha=0.5, color='green')
+    plt.title('Time series and seasonal naive forecast')
+    plt.tight_layout()
+    plt.savefig(output_filepath)
+    plt.clf()
+    plt.close()
+
+
+    train_metrics = calculate_time_series_metrics(ts_train, fittedvalues_1)
+    test_forecast_model = model_1.forecast(steps=len(ts_test))
+    test_metrics = calculate_time_series_metrics(ts_test, test_forecast_model)
+    test_forecast_naive = np.repeat(fittedvalues_1[-1], len(ts_test))
+    test_metrics_naive = calculate_time_series_metrics(
+        ts_test, test_forecast_naive)
+    test_metrics_seasonal_naive = calculate_time_series_metrics(
+        ts_test, test_forecast_seasonal_naive)
+
+    output_filepath = output_path / 'original_and_predictions.png'
+    plot_time_series_and_model_values_2(ts, model_1, output_filepath)
+
+
+
+    md.append('# Looking at model fit on differenced time series')
+    md.append('\n')
+
+    output_filepath = output_path / 'time_series_season_diff.png'
+    plt.plot(ts_train, alpha=0.5, color='blue')
+    plt.plot(fittedvalues_1, alpha=0.5, color='green')
+    plt.plot(fittedvalues_2, alpha=0.5, color='orange')
+    plt.title('Time series and seasonal differencing')
+    plt.tight_layout()
+    plt.savefig(output_filepath)
+    plt.clf()
+    plt.close()
+
+    md.append(
+        'Time series with seasonal differencing only (blue), and fitted values '
+        'from SARIMAX model with p, d, q = 0, 0, 0 and P, D, Q = 1, 1, 0 '
+        '(green), and with p, d, q = 0, 0, 1 and P, D, Q = 1, 1, 0 (orange)')
+    md.append('\n')
+    md.append('![Image](' + output_filepath.name + '){width=1024}')
+    md.append('\n')
+
+    output_filepath = output_path / 'time_series_season_diff_autocorr.png'
+    ts_series_by_row = [ts_train, fittedvalues_1, fittedvalues_2]
+    plot_time_series_autocorrelation(ts_series_by_row, output_filepath)
+
+    md.append(
+        'Time series with seasonal differencing only (Series #0), and fitted '
+        'values from SARIMAX model with p, d, q = 0, 0, 0 and P, D, Q = 1, 1, 0 '
+        '(Series #1), and with p, d, q = 0, 0, 1 and P, D, Q = 1, 1, 0 (Series '
+        '#2)')
+    md.append('\n')
+    md.append('![Image](' + output_filepath.name + '){width=1024}')
+    md.append('\n')
+
+    md.append(
+        'Adding the non-seasonal MA = 1 term made the ACF and PACF spikes at 1 '
+        'smaller and reversed their direction, but it magnified spikes at 6 '
+        'and 11, especially on the PACF. ')
+    md.append('\n')
+
+    md.append(
+        'Also, the variability of the fitted values for both models is much '
+        'smaller than for the differenced series, suggesting that a more '
+        'complex model would be needed -- a conclusion supported by the small, '
+        'persisting spikes in the ACF and PACF and by the parameters by which '
+        'I created the synthetic data.')
+    md.append('\n')
+
+    output_filepath = output_path / 'time_series_season_dediff.png'
+    plt.plot(ts_train, alpha=0.5, color='blue')
+    plt.plot(fittedvalues_1, alpha=0.5, color='green')
+    plt.plot(fittedvalues_2, alpha=0.5, color='orange')
+    plt.title('Time series, with de-differencing')
+    plt.tight_layout()
+    plt.savefig(output_filepath)
+    plt.clf()
+    plt.close()
+
+    md.append(
+        'Original time series (blue), and de-differenced fitted values from '
+        'SARIMAX model with p, d, q = 0, 0, 0 and P, D, Q = 1, 1, 0 '
+        '(Series #1)')
+    md.append(
+        'Original time series with seasonal differencing only (blue), and '
+        'de-differenced fitted values from SARIMAX model with p, d, q = 0, 0, 0 '
+        ' and P, D, Q = 1, 1, 0 (green), and with p, d, q = 0, 0, 1 and '
+        'P, D, Q = 1, 1, 0 (orange)')
+    md.append('\n')
+    md.append('![Image](' + output_filepath.name + '){width=1024}')
+    md.append('\n')
+
+    write_list_to_text_file(md, md_filepath, True)
+
+
 def main():
 
     input_path = Path.cwd() / 'output'
@@ -1247,6 +1396,8 @@ if __name__ == '__main__':
     #   plus those 4 relative to benchmark (probably naive and seasonal naive) 
     #   maybe also relative to in-sample, i.e., scaled errors
 
+    # after 'exploratory07', see how to set up naive metrics
+
     # sklearn
     # statsmodels
     # skforecast
@@ -1284,3 +1435,5 @@ if __name__ == '__main__':
     #   corresponding R functions, and they provide identical results, so if I
     #   have a mistake somewhere, it's conceptual -- not in the calculations
     exploratory07()
+
+    exploratory08()
