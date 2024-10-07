@@ -18,9 +18,55 @@ from skforecast.metrics.metrics import (
 import statsmodels.tsa.statespace.sarimax as sarimax
 
 from src.common import (
+    is_array_one_dimensional,
     root_median_squared_error,
     TimeSeriesDifferencing,
     )
+
+
+def test_is_array_one_dimensional_01():
+    """
+    Test valid input
+    """
+    arr = np.array([1])
+    result = is_array_one_dimensional(arr)
+    assert result == True
+
+
+def test_is_array_one_dimensional_02():
+    """
+    Test valid input
+    """
+    arr = np.array([1, 2, 3, 4, 5])
+    result = is_array_one_dimensional(arr)
+    assert result == True
+
+
+def test_is_array_one_dimensional_03():
+    """
+    Test valid input
+    """
+    arr = np.array([1, 2, 3, 4, 5]).reshape(-1, 1)
+    result = is_array_one_dimensional(arr)
+    assert result == True
+
+
+def test_is_array_one_dimensional_04():
+    """
+    Test valid input
+    """
+    arr = np.array([1, 2, 3, 4, 5]).reshape(-1, 1, 1)
+    result = is_array_one_dimensional(arr)
+    assert result == True
+
+
+def test_is_array_one_dimensional_05():
+    """
+    Test valid input
+    """
+    arr = np.array([1, 2, 3, 4, 5]).reshape(-1, 1, 1, 1)
+    result = is_array_one_dimensional(arr)
+    assert result == True
 
 
 @given(

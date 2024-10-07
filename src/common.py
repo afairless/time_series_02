@@ -298,16 +298,47 @@ def calculate_time_series_metrics(
     return metrics
 
 
+def is_array_one_dimensional(arr: np.ndarray) -> bool:
+    """
+    Check if the array is one-dimensional
+    """
+    return (np.array(arr.shape) > 1).sum() <= 1
+
+
 def decompose_and_forecast_seasonal_naive(
     time_series: np.ndarray, test_start_idx: int, period: int, 
     decompose_additive: bool, plot_decomposition: bool=False,
-    output_filepath: Path=Path('plot.png'),
-    ) -> np.ndarray:
+    output_filepath: Path=Path('plot.png')) -> np.ndarray:
+    """
+    Produce seasonal naive forecast by decomposing the time series into trend,
+        and seasonal components
+
+    time_series - a 1-dimensional array representing the time series
+    test_start_idx - the index of the time series at which the test set starts
+    period - the period of the seasonal component
+    decompose_additive - a boolean indicating whether to decompose the time
+        series using an additive model
+    plot_decomposition - a boolean indicating whether to plot the decomposition
+    output_filepath - the filepath to save the decomposition plot
+    """
+
+    # INPUT PRE-CHECKS AND SETTINGS
+    ##################################################
+
+    assert is_array_one_dimensional(time_series)
+    assert test_start_idx > 0
+    assert test_start_idx < len(time_series)
+
+    assert period < len(time_series) // 2
 
     if decompose_additive:
         decompose_model = 'additive'
     else:
         decompose_model = 'multiplicative'
+
+
+    # DECOMPOSE TIME SERIES AND GENERATE FORECAST
+    ##################################################
 
     decomposition = seasonal_decompose(
         time_series, model=decompose_model, period=period, two_sided=False)
@@ -320,6 +351,10 @@ def decompose_and_forecast_seasonal_naive(
     nan_mask = np.isnan(test_forecast_seasonal_naive)
     for idx in np.where(nan_mask)[0]:
         test_forecast_seasonal_naive[idx] = test_forecast_seasonal_naive[idx-1]
+
+
+    # PLOT DECOMPOSITION
+    ##################################################
 
     if plot_decomposition:
         _ = decomposition.plot()
