@@ -2,8 +2,9 @@
 
 import subprocess
 import numpy as np
+import pandas as pd
 from pathlib import Path
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 
 import matplotlib.pyplot as plt
 
@@ -310,16 +311,16 @@ def decompose_and_forecast_seasonal_naive(
     decompose_additive: bool, plot_decomposition: bool=False,
     output_filepath: Path=Path('plot.png')) -> np.ndarray:
     """
-    Produce seasonal naive forecast by decomposing the time series into trend,
+    Produce seasonal naive forecast by decomposing the time series into trend
         and seasonal components
 
     time_series - a 1-dimensional array representing the time series
     test_start_idx - the index of the time series at which the test set starts
     period - the period of the seasonal component
-    decompose_additive - a boolean indicating whether to decompose the time
-        series using an additive model
-    plot_decomposition - a boolean indicating whether to plot the decomposition
-    output_filepath - the filepath to save the decomposition plot
+    decompose_additive - whether to decompose the time series using an additive 
+        model ('True') or a multiplicative model ('False')
+    plot_decomposition - whether to save a plot of the decomposition
+    output_filepath - the filepath at which to save the decomposition plot
     """
 
     # INPUT PRE-CHECKS AND SETTINGS
@@ -355,6 +356,9 @@ def decompose_and_forecast_seasonal_naive(
 
     # PLOT DECOMPOSITION
     ##################################################
+    # conceptually, this should be its own function, but it's only a few lines 
+    #   of code
+    ##################################################
 
     if plot_decomposition:
         _ = decomposition.plot()
@@ -366,13 +370,105 @@ def decompose_and_forecast_seasonal_naive(
     return test_forecast_seasonal_naive
 
 
+def calculate_forecasts_and_metrics(
+    time_series: np.ndarray, test_start_idx: int, 
+    model_result: sarimax.SARIMAXResultsWrapper, period: int, 
+    decompose_additive: bool, plot_decomposition: bool=False,
+    decomposition_plot_filepath: Path=Path('plot.png')
+    ) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """
+    Produce naive, seasonal naive, and model forecasts and calculate metrics
+        for those forecasts and for the training portion of the time series
+    Seasonal naive forecast is produced by decomposing the time series into 
+        trend and seasonal components
+
+    time_series - a 1-dimensional array representing the time series
+    model_result - results from fitted 'statsmodels' SARIMAX model
+    test_start_idx - the index of the time series at which the test set starts
+    period - the period of the seasonal component
+    decompose_additive - whether to decompose the time series using an additive 
+        model ('True') or a multiplicative model ('False')
+    plot_decomposition - whether to save a plot of the decomposition
+    output_filepath - the filepath at which to save the decomposition plot
+    """
+
+    # INPUT PRE-CHECKS AND SETTINGS
+    ##################################################
+
+    assert is_array_one_dimensional(time_series)
+    assert test_start_idx > 0
+    assert test_start_idx < len(time_series)
+
+    assert period < len(time_series) // 2
+
+
+    # DERIVE VARIABLES FROM PARAMETERS
+    ##################################################
+
+    train_series = time_series[:test_start_idx]
+    test_series = time_series[test_start_idx:]
+
+    assert isinstance(model_result, sarimax.SARIMAXResultsWrapper)
+    fittedvalues = model_result.fittedvalues
+
+
+    # CALCULATE FORECASTS
+    ##################################################
+
+    test_forecast_model = model_result.forecast(steps=len(test_series))
+    test_forecast_naive = np.repeat(fittedvalues[-1], len(test_series))
+    test_forecast_seasonal_naive = decompose_and_forecast_seasonal_naive(
+        time_series, test_start_idx, period, decompose_additive, 
+        plot_decomposition, decomposition_plot_filepath)
+
+    forecast_df = pd.DataFrame({
+        'naive_forecast': test_forecast_naive,
+        'test_forecast_seasonal_naive': test_forecast_seasonal_naive,
+        'model_forecast': test_forecast_model})
+
+
+    # CALCULATE FORECAST METRICS
+    ##################################################
+
+    train_metrics = calculate_time_series_metrics(train_series, fittedvalues)
+    test_metrics = calculate_time_series_metrics(test_series, test_forecast_model)
+    test_metrics_naive = calculate_time_series_metrics(
+        test_series, test_forecast_naive)
+    test_metrics_seasonal_naive = calculate_time_series_metrics(
+        test_series, test_forecast_seasonal_naive)
+
+
+    # COMPILE FORECAST METRICS
+    ##################################################
+    # convert metrics dataclasses to dataframe
+    ##################################################
+
+    metrics = [
+        train_metrics, test_metrics, test_metrics_naive, 
+        test_metrics_seasonal_naive]
+
+    metrics_dict = {}
+    for metrics_class in metrics:
+        for field in fields(metrics_class):
+            field_value = getattr(metrics_class, field.name)
+            if field.name in metrics_dict:
+                metrics_dict[field.name].append(field_value)
+            else:
+                metrics_dict[field.name] = [field_value]
+
+    metrics_df = pd.DataFrame(metrics_dict)
+    metrics_df.index = ['train', 'test', 'test_naive', 'test_seasonal_naive']
+
+    return forecast_df, metrics_df
+
+
 ##################################################
 # TIME SERIES PLOTS
 ##################################################
 
 def plot_time_series(
-    time_series: np.ndarray, series_n_to_plot: int=1, 
-    output_filepath: Path=Path('plot.png')):
+    time_series: np.ndarray, series_n_to_plot: int=1, title: str='Time Series',
+    output_filepath: Path=Path('plot.png')) -> None:
 
     assert series_n_to_plot <= time_series.shape[0]
 
@@ -380,10 +476,11 @@ def plot_time_series(
     for srs in time_series[:series_n_to_plot]:
         plt.plot(srs, alpha=0.5)
 
-    plt.title('Time Series')
+    plt.title(title)
     plt.xlabel('Time Index')
     plt.ylabel('Value')
 
+    plt.tight_layout()
     plt.savefig(output_filepath)
 
     plt.clf()
@@ -391,7 +488,7 @@ def plot_time_series(
 
 
 def plot_time_series_autocorrelation(
-    ts: list[np.ndarray], output_filepath: Path=Path('plot.png')):
+    ts: list[np.ndarray], output_filepath: Path=Path('plot.png')) -> None:
     """
 
     Adapted from:
@@ -408,7 +505,6 @@ def plot_time_series_autocorrelation(
         tsa_plots.plot_pacf(ts[i], ax=axes[i, 2])
 
     plt.tight_layout()
-
     plt.savefig(output_filepath)
     plt.clf()
     plt.close()
@@ -416,7 +512,7 @@ def plot_time_series_autocorrelation(
 
 def plot_time_series_and_model_values_1(
     original_series: np.ndarray, model_result: sarimax.SARIMAXResultsWrapper,
-    output_filepath: Path=Path('plot.png')):
+    output_filepath: Path=Path('plot.png')) -> None:
 
     train_steps_n = len(model_result.fittedvalues)
     forecast_steps_n = len(original_series) - train_steps_n
@@ -438,7 +534,7 @@ def plot_time_series_and_model_values_1(
 
 def plot_time_series_and_model_values_2(
     original_series: np.ndarray, model_result: sarimax.SARIMAXResultsWrapper,
-    output_filepath: Path=Path('plot.png')):
+    output_filepath: Path=Path('plot.png')) -> None:
 
     prediction = model_result.predict(start=0, end=len(original_series))
 
@@ -457,7 +553,7 @@ def plot_time_series_and_model_values_2(
 
 def plot_time_series_and_model_values_3(
     original_series: np.ndarray, model_result: sarimax.SARIMAXResultsWrapper,
-    output_filepath: Path=Path('plot.png')):
+    output_filepath: Path=Path('plot.png')) -> None:
 
     simulations = model_result.simulate(
         nsimulations=len(original_series), repetitions=50).squeeze()

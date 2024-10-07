@@ -1,6 +1,7 @@
 #! /usr/bin/env python3
 
 import numpy as np
+import pandas as pd
 import polars as pl
 from pathlib import Path
 from dataclasses import dataclass, fields
@@ -23,6 +24,7 @@ if __name__ == '__main__':
         TimeSeriesDifferencing,
         write_list_to_text_file,
         decompose_and_forecast_seasonal_naive,
+        calculate_forecasts_and_metrics,
         calculate_time_series_metrics,
         plot_time_series,
         plot_time_series_autocorrelation,
@@ -38,6 +40,7 @@ else:
         TimeSeriesDifferencing,
         write_list_to_text_file,
         decompose_and_forecast_seasonal_naive,
+        calculate_forecasts_and_metrics,
         calculate_time_series_metrics,
         plot_time_series,
         plot_time_series_autocorrelation,
@@ -1212,33 +1215,26 @@ def exploratory08():
     fittedvalues_1 = model_1.fittedvalues
 
     output_filepath = output_path / 'decomposition.png'
-    test_forecast_seasonal_naive = decompose_and_forecast_seasonal_naive(
-        ts, test_start_idx, season_period, True, True, output_filepath)
+    # test_forecast_seasonal_naive = decompose_and_forecast_seasonal_naive(
+    #     ts, test_start_idx, season_period, True, True, output_filepath)
+    forecast_df, metrics_df = calculate_forecasts_and_metrics(
+        ts, test_start_idx, model_1, season_period, True, True, output_filepath)
+    output_filepath = output_path / 'metrics.csv'
+    metrics_df.to_csv(output_filepath)
 
-    output_filepath = output_path / 'original_vs_seasonal_naive_forecast.png'
-    plt.plot(ts_test, alpha=0.5, color='blue')
-    plt.plot(test_forecast_seasonal_naive, alpha=0.5, color='green')
-    plt.title('Time series and seasonal naive forecast')
-    plt.tight_layout()
-    plt.savefig(output_filepath)
-    plt.clf()
-    plt.close()
-
-
-    train_metrics = calculate_time_series_metrics(ts_train, fittedvalues_1)
-    test_forecast_model = model_1.forecast(steps=len(ts_test))
-    test_metrics = calculate_time_series_metrics(ts_test, test_forecast_model)
-    test_forecast_naive = np.repeat(fittedvalues_1[-1], len(ts_test))
-    test_metrics_naive = calculate_time_series_metrics(
-        ts_test, test_forecast_naive)
-    test_metrics_seasonal_naive = calculate_time_series_metrics(
-        ts_test, test_forecast_seasonal_naive)
 
     output_filepath = output_path / 'original_and_predictions.png'
     plot_time_series_and_model_values_2(ts, model_1, output_filepath)
 
+    title = 'Time series and naive, seasonal naive, and model forecasts'
+    original_and_forecasts = np.vstack([ts_test, forecast_df.values.T])
+    original_and_forecasts = original_and_forecasts[[0, 3, 1, 2], :]
+    plot_time_series(
+        original_and_forecasts, original_and_forecasts.shape[0], title, 
+        output_filepath)
 
 
+    ##################################################
     md.append('# Looking at model fit on differenced time series')
     md.append('\n')
 
