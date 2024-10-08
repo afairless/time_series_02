@@ -10,10 +10,10 @@ import matplotlib.pyplot as plt
 import statsmodels.tsa.stattools as tsa_tools
 import statsmodels.tsa.statespace.sarimax as sarimax
 import statsmodels.graphics.tsaplots as tsa_plots
-from statsmodels.tsa.seasonal import seasonal_decompose
 
 
-if __name__ == '__main__':
+# if __name__ == '__main__':
+try:
 
     from src.s01_generate_data import (
         expand_values_by_lengths_into_vector,
@@ -22,7 +22,6 @@ if __name__ == '__main__':
     from src.common import (
         TimeSeriesDifferencing,
         write_list_to_text_file,
-        decompose_and_forecast_seasonal_naive,
         calculate_forecasts_and_metrics,
         calculate_time_series_metrics,
         plot_time_series,
@@ -30,7 +29,8 @@ if __name__ == '__main__':
         plot_time_series_and_model_values_2,
         )
 
-else:
+# else:
+except:
     from s01_generate_data import (
         expand_values_by_lengths_into_vector,
         )
@@ -38,7 +38,6 @@ else:
     from common import (
         TimeSeriesDifferencing,
         write_list_to_text_file,
-        decompose_and_forecast_seasonal_naive,
         calculate_forecasts_and_metrics,
         calculate_time_series_metrics,
         plot_time_series,
@@ -328,7 +327,8 @@ def exploratory01():
     ts = df[row_idx, ts_colnames].to_numpy().reshape(-1)
     plot_filepath = output_path / 'time_series.png'
     ts_and_trend = np.vstack([ts, trend])
-    plot_time_series(ts_and_trend, 2, plot_filepath)
+    title = 'time series'
+    plot_time_series(ts_and_trend, 2, title, plot_filepath)
     md.append('Full time series with true trend')
     md.append('\n')
     md.append('![Image](' + plot_filepath.name + '){width=1024}')
@@ -336,7 +336,8 @@ def exploratory01():
 
     detrend_ts = ts - trend
     plot_filepath = output_path / 'time_series_detrend.png'
-    plot_time_series(detrend_ts.reshape(1, -1), 1, plot_filepath)
+    title = 'detrend series'
+    plot_time_series(detrend_ts.reshape(1, -1), 1, title, plot_filepath)
     md.append('Full detrended time series')
     md.append('\n')
     md.append('![Image](' + plot_filepath.name + '){width=1024}')
@@ -351,7 +352,8 @@ def exploratory01():
 
     ts_train = ts[:test_start_idx]
     plot_filepath = output_path / 'time_series_train.png'
-    plot_time_series(ts_train.reshape(1, -1), 1, plot_filepath)
+    title = 'series train'
+    plot_time_series(ts_train.reshape(1, -1), 1, title, plot_filepath)
     md.append('Time series training segment')
     md.append('\n')
     md.append('![Image](' + plot_filepath.name + '){width=1024}')
@@ -359,7 +361,8 @@ def exploratory01():
 
     detrend_ts_train = detrend_ts[:test_start_idx]
     plot_filepath = output_path / 'time_series_train_detrend.png'
-    plot_time_series(detrend_ts_train.reshape(1, -1), 1, plot_filepath)
+    title = 'series train detrend'
+    plot_time_series(detrend_ts_train.reshape(1, -1), 1, title, plot_filepath)
     md.append('Detrended time series training segment')
     md.append('\n')
     md.append('![Image](' + plot_filepath.name + '){width=1024}')
@@ -401,7 +404,6 @@ def exploratory01():
         f'p-value = {adf[1]:.3f} and KPSS p-value = {kpss[1]:.3f}, verifying '
         'a lack of trend')
     md.append('\n')
-
 
     write_list_to_text_file(md, md_filepath, True)
 
@@ -1173,7 +1175,6 @@ def exploratory07():
 
 def exploratory08():
     """
-    This is just checking/verifying that fitting
     """
 
     plt.rcParams.update({'figure.figsize': (16, 10)})
@@ -1200,28 +1201,72 @@ def exploratory08():
     ts_test = ts[test_start_idx:]
 
 
-    # model 1
+    # model
     ##################################################
+
+    # order, AR/p, d, MA/q
     order = (0, 0, 0)
     season_period = df[0, 'season_period']
     assert season_period == 6
-    # seasonal, AR = 1, D = 1, MA = 0
+    # seasonal order, AR/P, D, MA/Q
     seasonal_order = (1, 1, 0, season_period)
 
-    model_1 = sarimax.SARIMAX(
+    model_result = sarimax.SARIMAX(
         ts_train, order=order, seasonal_order=seasonal_order).fit()
-    assert isinstance(model_1, sarimax.SARIMAXResultsWrapper)
-    fittedvalues_1 = model_1.fittedvalues
+    assert isinstance(model_result, sarimax.SARIMAXResultsWrapper)
+
+
+    # differencing
+    ##################################################
+
+    ts_diff = TimeSeriesDifferencing(
+        k_diff=order[1], k_seasonal_diff=seasonal_order[1], 
+        seasonal_periods=season_period)
+    ts_train_season_diff = ts_diff.difference_time_series(ts_train)
+
+    output_filepath = output_path / 'time_series_season_diff_autocorr.png'
+    ts_series_by_row = [ts_train, ts_train_season_diff]
+    plot_time_series_autocorrelation(ts_series_by_row, output_filepath)
+
+    md.append('Original time series and differenced time series')
+    md.append('\n')
+    md.append('![Image](' + output_filepath.name + '){width=1024}')
+    md.append('\n')
+
+
+    # model results:  metrics
+    ##################################################
 
     output_filepath = output_path / 'decomposition.png'
     forecast_df, metrics_df = calculate_forecasts_and_metrics(
-        ts, test_start_idx, model_1, season_period, True, True, output_filepath)
+        ts, test_start_idx, model_result, season_period, True, True, 
+        output_filepath)
+
+    md.append('Model and naive forecast metrics')
+    md.append('\n')
+    # md.append(f'{metrics_df.round(2).to_string()}')
+    # md.append('\n')
+    md.append(f'{metrics_df.round(2).to_html()}')
+    md.append('\n')
+    md.append('Original series decomposition')
+    md.append('\n')
+    md.append('![Image](' + output_filepath.name + '){width=1024}')
+    md.append('\n')
+
     output_filepath = output_path / 'metrics.csv'
     metrics_df.to_csv(output_filepath)
 
 
+    # model results:  plots
+    ##################################################
+
     output_filepath = output_path / 'original_and_predictions.png'
-    plot_time_series_and_model_values_2(ts, model_1, output_filepath)
+    plot_time_series_and_model_values_2(ts, model_result, output_filepath)
+
+    md.append('Original time series and model predictions')
+    md.append('\n')
+    md.append('![Image](' + output_filepath.name + '){width=1024}')
+    md.append('\n')
 
     output_filepath = output_path / 'original_and_forecasts.png'
     title = 'Time series and naive, seasonal naive, and model forecasts'
@@ -1231,83 +1276,7 @@ def exploratory08():
         original_and_forecasts, original_and_forecasts.shape[0], title, 
         output_filepath)
 
-
-    ##################################################
-    arr = np.vstack([ts_test, forecast_df.values.T])
-    diff_arr = arr[1:, :] - arr[0, :]
-    title = 'Forecasts minus original time series'
-    output_filepath = output_path / 'original_minus_forecasts.png'
-    plot_time_series(
-        diff_arr, diff_arr.shape[0], title, output_filepath)
-
-
-    md.append('# Looking at model fit on differenced time series')
-    md.append('\n')
-
-    output_filepath = output_path / 'time_series_season_diff.png'
-    plt.plot(ts_train, alpha=0.5, color='blue')
-    plt.plot(fittedvalues_1, alpha=0.5, color='green')
-    plt.plot(fittedvalues_2, alpha=0.5, color='orange')
-    plt.title('Time series and seasonal differencing')
-    plt.tight_layout()
-    plt.savefig(output_filepath)
-    plt.clf()
-    plt.close()
-
-    md.append(
-        'Time series with seasonal differencing only (blue), and fitted values '
-        'from SARIMAX model with p, d, q = 0, 0, 0 and P, D, Q = 1, 1, 0 '
-        '(green), and with p, d, q = 0, 0, 1 and P, D, Q = 1, 1, 0 (orange)')
-    md.append('\n')
-    md.append('![Image](' + output_filepath.name + '){width=1024}')
-    md.append('\n')
-
-    output_filepath = output_path / 'time_series_season_diff_autocorr.png'
-    ts_series_by_row = [ts_train, fittedvalues_1, fittedvalues_2]
-    plot_time_series_autocorrelation(ts_series_by_row, output_filepath)
-
-    md.append(
-        'Time series with seasonal differencing only (Series #0), and fitted '
-        'values from SARIMAX model with p, d, q = 0, 0, 0 and P, D, Q = 1, 1, 0 '
-        '(Series #1), and with p, d, q = 0, 0, 1 and P, D, Q = 1, 1, 0 (Series '
-        '#2)')
-    md.append('\n')
-    md.append('![Image](' + output_filepath.name + '){width=1024}')
-    md.append('\n')
-
-    md.append(
-        'Adding the non-seasonal MA = 1 term made the ACF and PACF spikes at 1 '
-        'smaller and reversed their direction, but it magnified spikes at 6 '
-        'and 11, especially on the PACF. ')
-    md.append('\n')
-
-    md.append(
-        'Also, the variability of the fitted values for both models is much '
-        'smaller than for the differenced series, suggesting that a more '
-        'complex model would be needed -- a conclusion supported by the small, '
-        'persisting spikes in the ACF and PACF and by the parameters by which '
-        'I created the synthetic data.')
-    md.append('\n')
-
-    output_filepath = output_path / 'time_series_season_dediff.png'
-    plt.plot(ts_train, alpha=0.5, color='blue')
-    plt.plot(fittedvalues_1, alpha=0.5, color='green')
-    plt.plot(fittedvalues_2, alpha=0.5, color='orange')
-    plt.title('Time series, with de-differencing')
-    plt.tight_layout()
-    plt.savefig(output_filepath)
-    plt.clf()
-    plt.close()
-
-    md.append(
-        'Original time series (blue), and de-differenced fitted values from '
-        'SARIMAX model with p, d, q = 0, 0, 0 and P, D, Q = 1, 1, 0 '
-        '(Series #1)')
-    md.append(
-        'Original time series with seasonal differencing only (blue), and '
-        'de-differenced fitted values from SARIMAX model with p, d, q = 0, 0, 0 '
-        ' and P, D, Q = 1, 1, 0 (green), and with p, d, q = 0, 0, 1 and '
-        'P, D, Q = 1, 1, 0 (orange)')
+    md.append('Original time series forecast segment and forecasts')
     md.append('\n')
     md.append('![Image](' + output_filepath.name + '){width=1024}')
     md.append('\n')

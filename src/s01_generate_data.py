@@ -13,9 +13,11 @@ from statsmodels.tsa.arima_process import ArmaProcess
 import matplotlib.pyplot as plt
 
 
-if __name__ == '__main__':
+# if __name__ == '__main__':
+try:
     from common import plot_time_series
-else:
+# else:
+except:
     from src.common import plot_time_series
 
 
