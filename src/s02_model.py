@@ -1363,17 +1363,6 @@ def main():
 
 if __name__ == '__main__':
 
-    # metrics:  RMSE, MAE, RMdSE, MdAE, 
-    #   plus those 4 relative to benchmark (probably naive and seasonal naive) 
-    #   maybe also relative to in-sample, i.e., scaled errors
-
-    # after 'exploratory07', see how to set up naive metrics
-
-    # sklearn
-    # statsmodels
-    # skforecast
-    # pmdarima
-
     exploratory01()
     exploratory02()
     exploratory03()
