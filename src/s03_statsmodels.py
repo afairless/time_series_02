@@ -255,7 +255,7 @@ def main():
 
     # both the AR(2) and MA(2) models above make the ACF/PACF spiking worse and 
     #   show worse error metrics, compared to their AR(1) and MA(1) counterparts
-    #   (where all those models are seasonal PDQ(0, 1, 1))
+    #   (where all those models are also seasonal PDQ(0, 1, 1))
 
     # combine AR and MA terms
     order = (1, 0, 1)
