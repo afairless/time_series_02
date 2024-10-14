@@ -9,7 +9,6 @@ input_filepath <- paste(
 
 df <- read.csv(input_filepath)
 
-head(df)
 
 train_diff <- diff(df$ts_train, lag = 6, differences = 1)
 all(train_diff == df$ts_train_season_diff_1_padded[7:dim(df)[1]])

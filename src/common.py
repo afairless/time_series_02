@@ -288,7 +288,15 @@ def calculate_time_series_metrics(
     """
     Calculate basic error metrics for two time series
     """
+    
+    # if one series is shorter than the other, remove elements from the start
+    #   of the longer series so that the two series are the same length, then
+    #   calculate metrics
+    min_len = min(len(series_1), len(series_2))
+    series_1 = series_1[-min_len:]
+    series_2 = series_2[-min_len:]
 
+    # calculate metrics
     rmse = skl_rmse(series_1, series_2).item()
     rmdse = root_median_squared_error(series_1, series_2).item()
     mae = skl_mae(series_1, series_2).item()
