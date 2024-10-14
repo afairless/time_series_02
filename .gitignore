@@ -2,6 +2,8 @@
 /output*/
 /notebooks
 *.ipynb
+src/s05_stan
+
 
 # https://github.com/github/gitignore/blob/main/Python.gitignore
 #################################################

@@ -3,33 +3,22 @@
 import numpy as np
 import polars as pl
 from pathlib import Path
-from dataclasses import dataclass, fields
 
 import matplotlib.pyplot as plt
 
-import statsmodels.tsa.stattools as tsa_tools
 import statsmodels.tsa.statespace.sarimax as sarimax
-import statsmodels.graphics.tsaplots as tsa_plots
 
 
 try:
     from src.common import (
         TimeSeriesDifferencing,
-        write_list_to_text_file,
-        calculate_forecasts_and_metrics,
         plot_time_series,
-        plot_time_series_autocorrelation,
-        plot_time_series_and_model_values_2,
         )
 
 except:
     from common import (
         TimeSeriesDifferencing,
-        write_list_to_text_file,
-        calculate_forecasts_and_metrics,
         plot_time_series,
-        plot_time_series_autocorrelation,
-        plot_time_series_and_model_values_2,
         )
 
 
@@ -39,7 +28,7 @@ def run_model(
     run_dir_name: str,
     train_diff: bool = False,
     simple_differencing: bool = False,
-    hamilton_representation: bool = False):
+    hamilton_representation: bool = False) -> np.ndarray:
     """
     """
 
@@ -93,15 +82,17 @@ def run_model(
     # save model results
     ##################################################
 
-    prediction = model_result.predict(start=0, end=len(train_data)-1)
+    prediction_train = model_result.predict(start=0, end=len(train_data)-1)
     if train_diff:
-        prediction = ts_diff_0.de_difference_time_series(prediction)
+        prediction_train = ts_diff_0.de_difference_time_series(prediction_train)
 
-    plot_srs = np.vstack([ts_train, prediction])
+    plot_srs = np.vstack([ts_train, prediction_train])
 
     output_filepath = output_path / 'original_and_predictions.png'
     plot_time_series(
         plot_srs, plot_srs.shape[0], output_filepath=output_filepath)
+
+    return prediction_train
 
 
 def main():
@@ -109,6 +100,8 @@ def main():
     # for e in df.columns:
     #     if 'constant' not in e and e[:3] != 'ts_':
     #         print(e)
+
+    predictions_train = []
 
     # best manual model
     # order, AR/p, d, MA/q
@@ -120,9 +113,10 @@ def main():
     train_diff = False
     simple_differencing = False
     hamilton_representation = False
-    run_model(
+    prediction_train = run_model(
         order, season_pdq, run_dir_name, train_diff, simple_differencing, 
         hamilton_representation)
+    predictions_train.append(prediction_train)
     # this produces the best-looking results
 
 
@@ -137,9 +131,10 @@ def main():
     train_diff = False
     simple_differencing = True
     hamilton_representation = False
-    run_model(
+    prediction_train = run_model(
         order, season_pdq, run_dir_name, train_diff, simple_differencing, 
         hamilton_representation)
+    predictions_train.append(prediction_train)
     # this has poor results, as expected
 
     # same settings as simple differencing model, except with manual differncing
@@ -150,9 +145,10 @@ def main():
     train_diff = True
     simple_differencing = True
     hamilton_representation = False
-    run_model(
+    prediction_train = run_model(
         order, season_pdq, run_dir_name, train_diff, simple_differencing, 
         hamilton_representation)
+    predictions_train.append(prediction_train)
     # this has decent-looking results, though the de-differencing doesn't fully
     #   capture the original trends
 
@@ -168,9 +164,10 @@ def main():
     train_diff = False
     simple_differencing = True
     hamilton_representation = True
-    run_model(
+    prediction_train = run_model(
         order, season_pdq, run_dir_name, train_diff, simple_differencing, 
         hamilton_representation)
+    predictions_train.append(prediction_train)
     # this has poor results, as expected
     # Hamilton representation doesn't seem to matter much
 
@@ -182,14 +179,47 @@ def main():
     train_diff = True
     simple_differencing = True
     hamilton_representation = True
-    run_model(
+    prediction_train = run_model(
         order, season_pdq, run_dir_name, train_diff, simple_differencing, 
         hamilton_representation)
+    predictions_train.append(prediction_train)
     # this has decent-looking results, though the de-differencing doesn't fully
     #   capture the original trends
     # Hamilton representation doesn't seem to matter much
 
-    # maybe save prediction vectors and compare hamilton and non-hamilton
+
+    # shows that the two corresponding model pairs with and without the Hamilton
+    #   representation produce the same results
+    assert np.allclose(predictions_train[1], predictions_train[3])
+    assert np.allclose(predictions_train[2], predictions_train[4])
+
+
+    '''
+    Documentation on the Harvey and Hamilton representations:
+
+    https://www.statsmodels.org/dev/generated/statsmodels.tsa.statespace.sarimax.SARIMAX.html
+
+    This class allows two different underlying representations of ARMA models as 
+        state space models: that of Hamilton and that of Harvey. Both are 
+        equivalent in the sense that they are analytical representations of the 
+        ARMA model, but the state vectors of each have different meanings. For 
+        this reason, maximum likelihood does not result in identical parameter 
+        estimates and even the same set of parameters will result in different 
+        loglikelihoods.
+
+    The Harvey representation is convenient because it allows integrating 
+        differencing into the state vector to allow using all observations for 
+        estimation.
+
+    In this implementation of differenced models, the Hamilton representation is 
+        not able to accommodate differencing in the state vector, so 
+        simple_differencing (which performs differencing prior to estimation so 
+        that the first d + sD observations are lost) must be used.
+
+    Many other packages use the Hamilton representation, so that tests against 
+        Stata and R require using it along with simple differencing (as Stata 
+        does).
+    '''
 
 if __name__ == '__main__':
     main()
