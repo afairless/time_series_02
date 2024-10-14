@@ -619,7 +619,7 @@ def test_difference_time_series_05(
     low: int, high: int, arr_len_factor: int, seed: int, k_diff: int, 
     k_seasonal_diff: int, seasonal_periods: int):
     """
-    Test simple and seasonal differencing against statsmodels sarimax
+    Test simple and seasonal differencing against statsmodels sarimax 'diff'
     """
 
     rng = np.random.default_rng(seed)
@@ -660,7 +660,7 @@ def test_difference_time_series_06(
     low: int, high: int, arr_len_factor: int, seed: int, k_diff: int, 
     k_seasonal_diff: int, seasonal_periods: int):
     """
-    Test simple and seasonal differencing against pmdarima
+    Test simple and seasonal differencing against pmdarima 'diff'
     """
 
     rng = np.random.default_rng(seed)
@@ -672,8 +672,7 @@ def test_difference_time_series_06(
 
     ts_diff_0a = pm_diff(
         time_series, lag=seasonal_periods, differences=k_seasonal_diff)
-    ts_diff_0b = pm_diff(
-        ts_diff_0a, lag=1, differences=k_diff)
+    ts_diff_0b = pm_diff(ts_diff_0a, lag=1, differences=k_diff)
 
     ts_diff = TimeSeriesDifferencing(
         k_diff=k_diff, k_seasonal_diff=k_seasonal_diff,
@@ -1362,5 +1361,78 @@ def test_de_difference_time_series_22c():
     correct_result = np.array([-4, -3, 0, 0, 4])
 
     np.testing.assert_almost_equal(result, correct_result)
+
+
+@given(
+    k_diff=st.integers(min_value=1, max_value=4),
+    k_seasonal_diff=st.integers(min_value=1, max_value=4),
+    seasonal_periods=st.integers(min_value=1, max_value=12),
+    arr_len_factor=st.integers(min_value=1, max_value=10),
+    low=st.integers(min_value=-1000, max_value=1000),
+    high=st.integers(min_value=-1000, max_value=1000),
+    seed=st.integers(min_value=1, max_value=1_000_000))
+@settings(print_blob=True)
+def test_de_difference_time_series_23(
+    k_diff: int, k_seasonal_diff: int, seasonal_periods: int, 
+    arr_len_factor: int, low: int, high: int, seed: int):
+    """
+    Test simple and seasonal differencing:  invert differencing
+    """
+
+    rng = np.random.default_rng(seed)
+    low = k_diff
+    high = max(low+1, seasonal_periods)
+    simple_len = rng.integers(low=low, high=high, size=1)
+    arr_len = (k_seasonal_diff * seasonal_periods * arr_len_factor) + simple_len
+    time_series = low + (high - low) * rng.random(arr_len)
+
+    ts_diff = TimeSeriesDifferencing(
+        k_diff=k_diff, k_seasonal_diff=k_seasonal_diff, 
+        seasonal_periods=seasonal_periods)
+    ts_diff_0 = ts_diff.difference_time_series(time_series)
+    ts_diff_1 = ts_diff.de_difference_time_series(ts_diff_0)
+
+    ts_diff_2a = pm_diff(
+        time_series, lag=seasonal_periods, differences=k_seasonal_diff)
+    ts_diff_2b = pm_diff(ts_diff_2a, lag=1, differences=k_diff)
+
+    np.testing.assert_almost_equal(time_series, ts_diff_1, decimal=1)
+
+
+@given(
+    low=st.integers(min_value=-1000, max_value=1000),
+    high=st.integers(min_value=-1000, max_value=1000),
+    arr_len=st.integers(min_value=4, max_value=1000),
+    seed=st.integers(min_value=1, max_value=1_000_000))
+@settings(print_blob=True)
+def test_de_difference_time_series_23(
+    low: int, high: int, arr_len: int, seed: int):
+    """
+    Test simple differencing only:  invert differencing
+    Test inverse differencing against pmdarima 'diff_inv', but only for 
+        k_diff = 1, because parameter 'xi' seems inoperable and I don't want to 
+        re-code the de-differencing from the prepend vector as in 
+        'TimeSeriesDifferencing.de_difference_time_series'
+    """
+
+    k_diff = 1
+    rng = np.random.default_rng(seed)
+    time_series = low + (high - low) * rng.random(arr_len)
+
+    # pmdarima 'diff_inv' won't accept empty arrays, i.e., arrays of length 0
+    if len(time_series) == k_diff:
+        k_diff = k_diff - 1
+
+    ts_diff = TimeSeriesDifferencing(k_diff=k_diff)
+    ts_diff_0 = ts_diff.difference_time_series(time_series)
+    ts_diff_1 = ts_diff.de_difference_time_series(ts_diff_0)
+
+    # parameter 'xi' of pmdarima 'diff_inv' seems not to be functional
+    ts_diff_2 = pm_diff(time_series, lag=1, differences=k_diff)
+    ts_diff_3a = pm_diff_inv(ts_diff_2, lag=1, differences=k_diff)
+    ts_diff_3b = ts_diff_3a + time_series[:k_diff]
+
+    np.testing.assert_almost_equal(time_series, ts_diff_1, decimal=3)
+    np.testing.assert_almost_equal(ts_diff_1, ts_diff_3b, decimal=3)
 
 
