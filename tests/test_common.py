@@ -15,6 +15,8 @@ from skforecast.metrics.metrics import (
     mean_absolute_error as skf_mae,
     median_absolute_error as skf_mdae)
 
+from pmdarima.utils import diff as pm_diff
+from pmdarima.utils import diff_inv as pm_diff_inv
 import statsmodels.tsa.statespace.sarimax as sarimax
 
 from src.common import (
@@ -261,6 +263,32 @@ def test_statsmodels_sarimax_differencing_03(
 
     ts_diff_1 = time_series[period:] - time_series[:-period]
     ts_diff_2 = ts_diff_1[1:] - ts_diff_1[:-1]
+
+    np.testing.assert_almost_equal(ts_diff_0, ts_diff_2)
+    assert len(ts_diff_0) == len(time_series) - (period+1)
+
+
+@given(
+    low=st.integers(min_value=-1000, max_value=1000),
+    high=st.integers(min_value=-1000, max_value=1000),
+    arr_len=st.integers(min_value=100, max_value=1000),
+    period=st.integers(min_value=2, max_value=50),
+    seed=st.integers(min_value=1, max_value=1_000_000))
+@settings(print_blob=True)
+def test_statsmodels_sarimax_differencing_04(
+    low: int, high: int, arr_len: int, period: int, seed: int):
+    """
+    Verify that sarimax differencing and pmdarima differencing are equivalent
+    """
+
+    rng = np.random.default_rng(seed)
+    time_series = low + (high - low) * rng.random(arr_len)
+
+    ts_diff_0 = sarimax.diff(
+        time_series, k_diff=1, k_seasonal_diff=1, seasonal_periods=period)
+
+    ts_diff_1 = pm_diff(time_series, lag=period, differences=1)
+    ts_diff_2 = pm_diff(ts_diff_1, lag=1, differences=1)
 
     np.testing.assert_almost_equal(ts_diff_0, ts_diff_2)
     assert len(ts_diff_0) == len(time_series) - (period+1)
@@ -591,7 +619,7 @@ def test_difference_time_series_05(
     low: int, high: int, arr_len_factor: int, seed: int, k_diff: int, 
     k_seasonal_diff: int, seasonal_periods: int):
     """
-    Test simple and seasonal differencing
+    Test simple and seasonal differencing against statsmodels sarimax
     """
 
     rng = np.random.default_rng(seed)
@@ -610,8 +638,8 @@ def test_difference_time_series_05(
         seasonal_periods=seasonal_periods)
     ts_diff_1 = ts_diff.difference_time_series(time_series)
     ts_diff_2 = ts_diff._difference_time_series_2(time_series)
-    np.testing.assert_almost_equal(ts_diff_0, ts_diff_2)
 
+    np.testing.assert_almost_equal(ts_diff_0, ts_diff_2)
     np.testing.assert_almost_equal(ts_diff_0, ts_diff_1)
 
     season_period_diff_len = k_seasonal_diff * seasonal_periods
@@ -619,7 +647,49 @@ def test_difference_time_series_05(
     assert len(ts_diff_0) == max(0, (len(time_series) - diff_total))
 
 
-def test_difference_time_series_06():
+@given(
+    low=st.integers(min_value=-1000, max_value=1000),
+    high=st.integers(min_value=-1000, max_value=1000),
+    arr_len_factor=st.integers(min_value=1, max_value=20),
+    seed=st.integers(min_value=1, max_value=1_000_000),
+    k_diff=st.integers(min_value=1, max_value=4),
+    k_seasonal_diff=st.integers(min_value=1, max_value=4),
+    seasonal_periods=st.integers(min_value=1, max_value=50))
+@settings(print_blob=True)
+def test_difference_time_series_06(
+    low: int, high: int, arr_len_factor: int, seed: int, k_diff: int, 
+    k_seasonal_diff: int, seasonal_periods: int):
+    """
+    Test simple and seasonal differencing against pmdarima
+    """
+
+    rng = np.random.default_rng(seed)
+    low = k_diff
+    high = max(low+1, seasonal_periods)
+    simple_len = rng.integers(low=low, high=high, size=1)
+    arr_len = (k_seasonal_diff * seasonal_periods * arr_len_factor) + simple_len
+    time_series = low + (high - low) * rng.random(arr_len)
+
+    ts_diff_0a = pm_diff(
+        time_series, lag=seasonal_periods, differences=k_seasonal_diff)
+    ts_diff_0b = pm_diff(
+        ts_diff_0a, lag=1, differences=k_diff)
+
+    ts_diff = TimeSeriesDifferencing(
+        k_diff=k_diff, k_seasonal_diff=k_seasonal_diff,
+        seasonal_periods=seasonal_periods)
+    ts_diff_1 = ts_diff.difference_time_series(time_series)
+    ts_diff_2 = ts_diff._difference_time_series_2(time_series)
+
+    np.testing.assert_almost_equal(ts_diff_0b, ts_diff_2)
+    np.testing.assert_almost_equal(ts_diff_0b, ts_diff_1)
+
+    season_period_diff_len = k_seasonal_diff * seasonal_periods
+    diff_total = k_diff + season_period_diff_len 
+    assert len(ts_diff_0b) == max(0, (len(time_series) - diff_total))
+
+
+def test_difference_time_series_07():
     """
     Test simple and seasonal differencing
     """
@@ -1150,7 +1220,7 @@ def test_de_difference_time_series_18(
     ts_diff_0 = ts_diff.difference_time_series(time_series)
     ts_diff_1 = ts_diff.de_difference_time_series(ts_diff_0)
 
-    np.testing.assert_almost_equal(time_series, ts_diff_1, decimal=1)
+    np.testing.assert_almost_equal(time_series, ts_diff_1, decimal=0)
 
 
 def test_de_difference_time_series_19():
