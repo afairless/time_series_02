@@ -1,3 +1,11 @@
+// from Stan User's Guide
+// https://mc-stan.org/docs/stan-users-guide/index.html
+// Stan User’s Guide
+// Version 2.35
+
+// https://mc-stan.org/docs/stan-users-guide/time-series.html
+// Time-Series Models
+
 data {
   int<lower=0> N;        // number of cases/data points
   vector[N] y;           // outcome/response variable
