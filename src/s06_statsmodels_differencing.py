@@ -137,7 +137,7 @@ def main():
     predictions_train.append(prediction_train)
     # this has poor results, as expected
 
-    # same settings as simple differencing model, except with manual differncing
+    # same settings as simple differencing model, except with manual differencing
     order = (0, 0, 1)
     season_pdq = (0, 0, 1)
     order_str = ''.join([str(e) for e in (order + season_pdq)])
@@ -171,7 +171,7 @@ def main():
     # this has poor results, as expected
     # Hamilton representation doesn't seem to matter much
 
-    # same settings as simple differencing model, except with manual differncing
+    # same settings as simple differencing model, except with manual differencing
     order = (0, 0, 1)
     season_pdq = (0, 0, 1)
     order_str = ''.join([str(e) for e in (order + season_pdq)])
